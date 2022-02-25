@@ -1,6 +1,6 @@
 import { PlatformAccessory, Service } from 'homebridge';
 import { MitsubishiHeavyAirconPlatform } from '../platform';
-import { MHACWIFI1 } from './device';
+import { MHACWIFI1 } from './MHACWIFI1';
 
 export class OutdoorTemperatureService {
 

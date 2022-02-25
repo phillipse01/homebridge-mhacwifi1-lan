@@ -1,7 +1,7 @@
 import { PlatformAccessory, PlatformConfig } from 'homebridge'
 import { AirconService } from "./accessories/aircon"
 import { DehumidifierService } from "./accessories/dehumidifier"
-import { EVENT_UPDATED, MHACWIFI1 } from './accessories/device'
+import { EVENT_UPDATED, MHACWIFI1 } from './accessories/MHACWIFI1'
 import { FanService } from "./accessories/fan"
 import { OutdoorTemperatureService } from "./accessories/outdoor"
 import { MitsubishiHeavyAirconPlatform } from './platform'

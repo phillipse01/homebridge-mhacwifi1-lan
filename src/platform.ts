@@ -1,5 +1,5 @@
 import { API, APIEvent, Characteristic, DynamicPlatformPlugin, Logger, PlatformAccessory, PlatformConfig, Service } from 'homebridge'
-import { MHACWIFI1 } from './accessories/device'
+import { MHACWIFI1 } from './accessories/MHACWIFI1'
 import { AirconAccessory, OutdoorTemperatureAccessory } from './accessory'
 import { PLATFORM_NAME, PLUGIN_NAME } from './settings'
 

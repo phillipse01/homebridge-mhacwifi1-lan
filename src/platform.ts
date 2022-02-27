@@ -1,5 +1,6 @@
 import { API, APIEvent, Characteristic, DynamicPlatformPlugin, Logger, PlatformAccessory, PlatformConfig, Service } from 'homebridge'
 import { MHACWIFI1 } from './accessories/MHACWIFI1'
+import { MHRCWMP1 } from './accessories/MHRCWMP1'
 import { AirconAccessory, OutdoorTemperatureAccessory } from './accessory'
 import { PLATFORM_NAME, PLUGIN_NAME } from './settings'
 
@@ -18,6 +19,7 @@ const DISCOVER_DELAY = 10000
  *  minSetpoint: number                    // Minimum value for the setpoint temperature
  *  maxSetpoint: number                    // Maximum value for the setpoint temperature
  *  syncPeriod: number                     // Number of milliseconds between sensor sync requests
+ *  cloudDevice: boolean                   // Is the hardware cloud (MH-AC-WIFI-1) (true). Otherwise WMP (MH-RC-WMP-1) (False)
  */
 
  //   mac: string                            // MAC address for the device
@@ -66,7 +68,9 @@ export class MitsubishiHeavyAirconPlatform implements DynamicPlatformPlugin {
 
         this.log.info(`Checking for device at ${config.host}`)
 
-        const device = new MHACWIFI1(this.log, config.host, "", "")
+        const device = config.cloudDevice ? 
+            new MHACWIFI1(this.log, config.host, "", "") : 
+            new MHRCWMP1(this.log, config.host, "", "")
         await device.getInfo()
             .then(info => {
                 config.info = info
@@ -90,8 +94,11 @@ export class MitsubishiHeavyAirconPlatform implements DynamicPlatformPlugin {
         config.minSetpoint = config.minSetpoint || 0
         config.maxSetpoint = config.maxSetpoint || 100
         config.syncPeriod = config.syncPeriod || 0
-        const device = new MHACWIFI1(this.log, config.host, config.username, config.password,
-            config.slowThreshold, config.minSetpoint, config.maxSetpoint, config.syncPeriod)
+        const device = config.cloudDevice ? 
+            new MHACWIFI1(this.log, config.host, config.username, config.password,
+            config.slowThreshold, config.minSetpoint, config.maxSetpoint, config.syncPeriod) : 
+            new MHRCWMP1(this.log, config.host, config.username, config.password,
+                config.slowThreshold, config.minSetpoint, config.maxSetpoint, config.syncPeriod)
         device.startSynchronization()
 
         let uuid = this.api.hap.uuid.generate('aircon' + config.mac)

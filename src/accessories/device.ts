@@ -1,3 +1,5 @@
+import EventEmitter from "events";
+
 export enum MhacModeTypes {
     AUTO = 0,
     HEAT = 1,
@@ -11,12 +13,12 @@ export const EVENT_UPDATED = 'updated'
 
 type CommandResponseType = any;         // eslint-disable-line @typescript-eslint/no-explicit-any
 
-type SensorType = {
+export type SensorType = {
     uid: number
     value: number
 }
 
-export interface Device {
+export interface Device extends EventEmitter {
 
     /**
      * Public API for getting state values
@@ -84,7 +86,7 @@ export interface Device {
     refreshState(): Promise<void>
 }
 
-const SensorConfigMap = [
+export const SensorConfigMap = [
     {
         uid: 1,
         attr: "active",

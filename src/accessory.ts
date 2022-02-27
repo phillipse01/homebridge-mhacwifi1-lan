@@ -1,7 +1,7 @@
 import { PlatformAccessory, PlatformConfig } from 'homebridge'
 import { AirconService } from "./accessories/aircon"
 import { DehumidifierService } from "./accessories/dehumidifier"
-import { EVENT_UPDATED, MHACWIFI1 } from './accessories/MHACWIFI1'
+import { EVENT_UPDATED, Device } from './accessories/device'
 import { FanService } from "./accessories/fan"
 import { OutdoorTemperatureService } from "./accessories/outdoor"
 import { MitsubishiHeavyAirconPlatform } from './platform'
@@ -20,7 +20,7 @@ export class AirconAccessory {
     private dehumidifier: DehumidifierService
 
     constructor(
-        device: MHACWIFI1,
+        device: Device,
         platform: MitsubishiHeavyAirconPlatform,
         accessory: PlatformAccessory,
         config: PlatformConfig,
@@ -61,7 +61,7 @@ export class OutdoorTemperatureAccessory {
     private temperature: OutdoorTemperatureService
 
     constructor(
-        device: MHACWIFI1,
+        device: Device,
         platform: MitsubishiHeavyAirconPlatform,
         accessory: PlatformAccessory,
         config: PlatformConfig,

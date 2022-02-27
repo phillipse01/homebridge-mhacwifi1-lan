@@ -1,6 +1,6 @@
 import { PlatformAccessory, Service } from 'homebridge';
 import { MitsubishiHeavyAirconPlatform } from '../platform';
-import { MHACWIFI1 } from './MHACWIFI1';
+import { Device } from './Device';
 
 export class OutdoorTemperatureService {
 
@@ -9,7 +9,7 @@ export class OutdoorTemperatureService {
     constructor(
         private readonly platform: MitsubishiHeavyAirconPlatform,
         accessory: PlatformAccessory,
-        private readonly device: MHACWIFI1
+        private readonly device: Device
     ) {
         const Characteristic = platform.Characteristic;
 

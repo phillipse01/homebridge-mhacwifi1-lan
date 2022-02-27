@@ -1,6 +1,6 @@
 import { CharacteristicValue, PlatformAccessory, Service } from 'homebridge';
 import { MitsubishiHeavyAirconPlatform } from '../platform';
-import { MhacModeTypes, MHACWIFI1 } from './MHACWIFI1';
+import { MhacModeTypes, Device } from './Device';
 
 export class AirconService {
 
@@ -9,7 +9,7 @@ export class AirconService {
     constructor(
         private readonly platform: MitsubishiHeavyAirconPlatform,
         private readonly accessory: PlatformAccessory,
-        private readonly device: MHACWIFI1
+        private readonly device: Device
     ) {
         const Characteristic = platform.Characteristic;
 

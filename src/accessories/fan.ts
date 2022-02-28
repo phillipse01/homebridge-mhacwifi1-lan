@@ -1,6 +1,6 @@
 import { CharacteristicValue, PlatformAccessory, Service } from 'homebridge';
 import { MitsubishiHeavyAirconPlatform } from '../platform';
-import { MhacModeTypes, Device } from './Device';
+import { MhacModeTypes, Device } from './device';
 
 export class FanService {
 

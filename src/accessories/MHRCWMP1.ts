@@ -141,7 +141,12 @@ export class MHRCWMP1 extends EventEmitter implements Device {
     public async getInfo(): Promise<Record<string, string>> {
         //const result = await this.httpRequest("getinfo", {})
         this.log.debug("identity ",this.identity)
-        this.log.debug("getinfothis ",this)
+        try {
+            await this.waitForEvent(this.coms, "ID");
+        } catch (ex) {
+            console.log("async failed with", ex);
+        }
+
         return JSON.parse(this.identity)
     }
 
@@ -426,8 +431,23 @@ export class MHRCWMP1 extends EventEmitter implements Device {
         this.identity = {model, wlanSTAMAC, ip, protocol, fwVersion, rssi, name};
         this.identity.sn = wlanSTAMAC
         this.log.debug("id recieved: ",this.identity)
-        this.log.debug("onidthis ",this)
       }
+
+
+    waitForEvent<T>(emitter: EventEmitter, event: string): Promise<T> {
+        return new Promise((resolve, reject) => {
+            const success = (val: T) => {
+                emitter.off("error", fail);
+                resolve(val);
+            };
+            const fail = (err: Error) => {
+                emitter.off(event, success);
+                reject(err);
+            };
+            emitter.once(event, success);
+            emitter.once("error", fail);
+        });
+    }
 
 
 }

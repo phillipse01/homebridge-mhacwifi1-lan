@@ -141,6 +141,7 @@ export class MHRCWMP1 extends EventEmitter implements Device {
     public async getInfo(): Promise<Record<string, string>> {
         //const result = await this.httpRequest("getinfo", {})
         this.log.debug("identity ",this.identity)
+        this.log.debug("getinfothis ",this)
         return JSON.parse(this.identity)
     }
 
@@ -421,13 +422,11 @@ export class MHRCWMP1 extends EventEmitter implements Device {
 
     private onID = (id) => {
         //ID:Model,MAC,IP,Protocol,Version,RSSI,Name,(unknown)
-        this.log.debug("id recieved: ",id)
         const [model, wlanSTAMAC, ip, protocol, fwVersion, rssi, name] = id.split(",");
-        this.log.debug("id split: ",model, wlanSTAMAC, ip, protocol, fwVersion, rssi, name)
         this.identity = {model, wlanSTAMAC, ip, protocol, fwVersion, rssi, name};
-        this.log.debug("id id: ",this.identity)
         this.identity.sn = wlanSTAMAC
-        this.log.debug("id id2: ",this.identity)
+        this.log.debug("id recieved: ",this.identity)
+        this.log.debug("onidthis ",this)
       }
 
 

@@ -82,7 +82,7 @@ export class MitsubishiHeavyAirconPlatform implements DynamicPlatformPlugin {
             .catch(error => {
                 this.log.info(`No device found at address: ${config.host} (${error})`)
                 setTimeout(() => {
-                    this.discoverDevice()
+                    device.getInfo()
                 }, DISCOVER_DELAY)
             })
     }

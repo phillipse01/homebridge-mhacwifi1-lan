@@ -33,6 +33,8 @@ export class MHRCWMP1 extends EventEmitter implements Device {
     private state: any = {}                 // eslint-disable-line @typescript-eslint/no-explicit-any
 
     private coms: MHRCWMP1_connect
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    private identity: any = {}
 
     constructor(
         private log: Logger,
@@ -59,7 +61,8 @@ export class MHRCWMP1 extends EventEmitter implements Device {
         this.log.info(`You have selected WMP communication`)
         //create connaection singleton:
         this.coms = MHRCWMP1_connect.getInstance(this.log,this.host)
-        this.coms.connect()
+        //listen for event info from the connection
+        this.coms.on("ID", this.onID);
     }
 
     /**
@@ -136,8 +139,8 @@ export class MHRCWMP1 extends EventEmitter implements Device {
      * @returns Object containing device information such as firmware version
      */
     public async getInfo(): Promise<Record<string, string>> {
-        const result = await this.httpRequest("getinfo", {})
-        return result.info
+        //const result = await this.httpRequest("getinfo", {})
+        return JSON.parse(this.identity)
     }
 
     /**
@@ -414,6 +417,15 @@ export class MHRCWMP1 extends EventEmitter implements Device {
         })
 
     }
+
+    private onID = (id) => {
+        //ID:Model,MAC,IP,Protocol,Version,RSSI,Name,(unknown)
+        const [model, wlanSTAMAC, ip, protocol, fwVersion, rssi, name] = id.split(",");
+        this.identity = {model, wlanSTAMAC, ip, protocol, fwVersion, rssi, name};
+        this.identity.sn = wlanSTAMAC
+      }
+
+
 }
 
 class MHRCWMP1_connect extends EventEmitter {
@@ -425,7 +437,7 @@ class MHRCWMP1_connect extends EventEmitter {
 
     private constructor(private log: Logger, private host: string){
         super()
-        this.log.info(`You have selected WMP communication`)
+        this.log.debug(`Created connect class`)
         this.buffer = "";
         this.connect();
     }
@@ -437,8 +449,8 @@ class MHRCWMP1_connect extends EventEmitter {
         return MHRCWMP1_connect.instance;
     }
 
-    connect() {
-        this.log.info("Connecting to Intesisbox at "+this.host+":3310")
+    private connect() {
+        this.log.info("Connecting to Intesis at "+this.host+":3310")
         this.socket = net.connect(3310, this.host, this.onSocketConnect);
         this.socket.on("error", this.onSocketError);
         this.socket.on("close", this.onSocketClose);

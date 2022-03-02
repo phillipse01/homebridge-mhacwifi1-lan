@@ -64,10 +64,10 @@
         "minimum": 1000,
         "maximum": 5000
       },      
-      "cloudDevice": {
-        "title": "Is the hardware cloud (MH-AC-WIFI-1)? Uncheck for WMP (MH-RC-WMP-1)",
+      "wmpDevice": {
+        "title": "Is the hardware WMP? (MH-RC-WMP-1)",
         "type": "boolean",
-        "default": true
+        "default": false
       }
     }
   },
@@ -75,7 +75,6 @@
     "name",
     "host",
     "outdoorTemperature",
-    "cloudDevice",
     {
       "type": "fieldset",
       "title": "Authentication",
@@ -90,6 +89,7 @@
       "title": "Advanced Settings",
       "expandable": true,
       "items": [
+        "wmpDevice",
         "slowThreshold",
         "minSetpoint",
         "maxSetpoint",

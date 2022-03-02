@@ -31,9 +31,8 @@ export class MHRCWMP1 extends EventEmitter implements Device {
     private sensorMap: any = {}             // eslint-disable-line @typescript-eslint/no-explicit-any
     private previousState: any = {}         // eslint-disable-line @typescript-eslint/no-explicit-any
     private state: any = {}                 // eslint-disable-line @typescript-eslint/no-explicit-any
-    private number = 1
-    socket;
-    buffer: string;
+
+    private coms: MHRCWMP1_connect
 
     constructor(
         private log: Logger,
@@ -57,9 +56,10 @@ export class MHRCWMP1 extends EventEmitter implements Device {
         this.syncPeriod = Math.max(1000, syncPeriod)
         this.log.info(`Device sync period is ${this.syncPeriod}ms`)
         this._buildSensorMap();
-        this.buffer = "";
         this.log.info(`You have selected WMP communication`)
-        this.connect();
+        //create connaection singleton:
+        this.coms = MHRCWMP1_connect.getInstance(this.log,this.host)
+        this.coms.connect()
     }
 
     /**
@@ -113,96 +113,6 @@ export class MHRCWMP1 extends EventEmitter implements Device {
             }
         }
     }
-
-    private connect() {
-        this.log.info("Connecting to Intesisbox at "+this.host+":3310")
-        this.socket = net.connect(3310, this.host, this.onSocketConnect);
-        this.socket.on("error", this.onSocketError);
-        this.socket.on("close", this.onSocketClose);
-        this.socket.on("line", this.onSocketLine);
-        this.socket.on("data", this.onSocketData);
-    }
-
-    private onSocketConnect = () => {
-        // Ask for identifying information
-        this.sendID();
-    
-        // Ask for the initial state
-        this.sendGET("*");
-    }
-
-    private onSocketData = (data) => {
-        this.buffer += data;
-        let n = this.buffer.indexOf("\n");
-        while (~n) {
-          let line = this.buffer.substring(0, n);
-          if (line.endsWith("\r")) {
-            line = line.slice(0, -1);
-          }
-          this.socket.emit("line", line);
-          this.buffer = this.buffer.substring(n + 1);
-          n = this.buffer.indexOf("\n");
-        }
-      }
-    
-    private onSocketLine = (line) => {
-        const [code, rest] = line.split(":", 2);
-        if (code == "ID") {
-            this.log.debug("Received identify:", rest)
-            this.emit("ID", rest);
-        } else if (code == "INFO") {
-            const [name, value] = rest.split(",", 2);
-            this.log.debug("Received info:", name, "=", value)
-            this.emit("INFO", name, value);
-        } else if (code == "ACK") {
-            this.log.debug("Received ack")
-            this.emit("ACK");
-        } else if (code == "CHN," + this.number) {
-            const [name, value] = rest.split(",", 2);
-
-            this.log.debug("Received Change:", name, value)
-            this.emit("CHN," + this.number, name, value);
-            this.emit("CHN," + this.number + ":" + name, value);
-        } else {
-            this.log.debug("Received unknown message:", code, rest);
-        }
-    }
-
-    private onSocketError = (error) => {
-        this.log.error("Connection error:", error);
-    }
-
-    private onSocketClose = () => {
-        this.log.warn("Connection closed, reconnecting in 5 seconds");
-        setTimeout(() => {
-            this.connect();
-        }, 5000);
-    }
-
-    private send(command) {
-        this.log.debug("Send:", command);
-        this.socket.write(command + "\r\n");
-    }
-    
-    private sendID() {
-        this.send("ID");
-    }
-    
-    private sendINFO(callback) {
-        if (callback) {
-          this.once("INFO", function(value) { callback(null, value) });
-        }
-        this.send("INFO");
-    }
-    
-    private sendGET(name) {
-        this.send("GET," + this.number + ":" + name);
-    }
-    
-
-
-
-
 
     /**
      * Enables periodic timer for polling all device sensor states
@@ -504,4 +414,112 @@ export class MHRCWMP1 extends EventEmitter implements Device {
         })
 
     }
+}
+
+class MHRCWMP1_connect extends EventEmitter {
+
+    static instance: MHRCWMP1_connect
+    private number = 1
+    socket;
+    buffer: string;
+
+    private constructor(private log: Logger, private host: string){
+        super()
+        this.log.info(`You have selected WMP communication`)
+        this.buffer = "";
+        this.connect();
+    }
+
+    public static getInstance(log: Logger, host: string): MHRCWMP1_connect {
+        if (!MHRCWMP1_connect.instance) {
+            MHRCWMP1_connect.instance = new MHRCWMP1_connect(log,host);
+        }
+        return MHRCWMP1_connect.instance;
+    }
+
+    connect() {
+        this.log.info("Connecting to Intesisbox at "+this.host+":3310")
+        this.socket = net.connect(3310, this.host, this.onSocketConnect);
+        this.socket.on("error", this.onSocketError);
+        this.socket.on("close", this.onSocketClose);
+        this.socket.on("line", this.onSocketLine);
+        this.socket.on("data", this.onSocketData);
+    }
+
+    private onSocketConnect = () => {
+        // Ask for identifying information
+        this.sendID();
+    
+        // Ask for the initial state
+        this.sendGET("*");
+    }
+
+    private onSocketData = (data) => {
+        this.buffer += data;
+        let n = this.buffer.indexOf("\n");
+        while (~n) {
+          let line = this.buffer.substring(0, n);
+          if (line.endsWith("\r")) {
+            line = line.slice(0, -1);
+          }
+          this.socket.emit("line", line);
+          this.buffer = this.buffer.substring(n + 1);
+          n = this.buffer.indexOf("\n");
+        }
+      }
+    
+    private onSocketLine = (line) => {
+        const [code, rest] = line.split(":", 2);
+        if (code == "ID") {
+            this.log.debug("Received identify:", rest)
+            this.emit("ID", rest);
+        } else if (code == "INFO") {
+            const [name, value] = rest.split(",", 2);
+            this.log.debug("Received info:", name, "=", value)
+            this.emit("INFO", name, value);
+        } else if (code == "ACK") {
+            this.log.debug("Received ack")
+            this.emit("ACK");
+        } else if (code == "CHN," + this.number) {
+            const [name, value] = rest.split(",", 2);
+
+            this.log.debug("Received Change:", name, value)
+            this.emit("CHN," + this.number, name, value);
+            this.emit("CHN," + this.number + ":" + name, value);
+        } else {
+            this.log.debug("Received unknown message:", code, rest);
+        }
+    }
+
+    private onSocketError = (error) => {
+        this.log.error("Connection error:", error);
+    }
+
+    private onSocketClose = () => {
+        this.log.warn("Connection closed, reconnecting in 5 seconds");
+        setTimeout(() => {
+            this.connect();
+        }, 5000);
+    }
+
+    private send(command) {
+        this.log.debug("Send:", command);
+        this.socket.write(command + "\r\n");
+    }
+    
+    private sendID() {
+        this.send("ID");
+    }
+    
+    private sendINFO(callback) {
+        if (callback) {
+          this.once("INFO", function(value) { callback(null, value) });
+        }
+        this.send("INFO");
+    }
+    
+    private sendGET(name) {
+        this.send("GET," + this.number + ":" + name);
+    }
+
 }

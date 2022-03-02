@@ -140,6 +140,7 @@ export class MHRCWMP1 extends EventEmitter implements Device {
      */
     public async getInfo(): Promise<Record<string, string>> {
         //const result = await this.httpRequest("getinfo", {})
+        this.log.debug("identity ",this.identity)
         return JSON.parse(this.identity)
     }
 

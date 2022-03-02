@@ -423,8 +423,11 @@ export class MHRCWMP1 extends EventEmitter implements Device {
         //ID:Model,MAC,IP,Protocol,Version,RSSI,Name,(unknown)
         this.log.debug("id recieved: ",id)
         const [model, wlanSTAMAC, ip, protocol, fwVersion, rssi, name] = id.split(",");
+        this.log.debug("id split: ",model, wlanSTAMAC, ip, protocol, fwVersion, rssi, name)
         this.identity = {model, wlanSTAMAC, ip, protocol, fwVersion, rssi, name};
+        this.log.debug("id id: ",this.identity)
         this.identity.sn = wlanSTAMAC
+        this.log.debug("id id2: ",this.identity)
       }
 
 

@@ -58,6 +58,7 @@ export class MHRCWMP1 extends EventEmitter implements Device {
         this.log.info(`Device sync period is ${this.syncPeriod}ms`)
         this._buildSensorMap();
         this.buffer = "";
+        this.log.info(`You have selected WMP communication`)
         this.connect();
     }
 
@@ -225,7 +226,6 @@ export class MHRCWMP1 extends EventEmitter implements Device {
      * @returns Object containing device information such as firmware version
      */
     public async getInfo(): Promise<Record<string, string>> {
-        this.log.info(`You have selected WMP communication`)
         const result = await this.httpRequest("getinfo", {})
         return result.info
     }

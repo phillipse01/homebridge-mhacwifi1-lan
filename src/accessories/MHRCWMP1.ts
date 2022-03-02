@@ -35,6 +35,8 @@ export class MHRCWMP1 extends EventEmitter implements Device {
     private coms: MHRCWMP1_connect
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     private identity: any = {}
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    private info: any;
 
     constructor(
         private log: Logger,
@@ -63,6 +65,8 @@ export class MHRCWMP1 extends EventEmitter implements Device {
         this.coms = MHRCWMP1_connect.getInstance(this.log,this.host)
         //listen for event info from the connection
         this.coms.on("ID", this.onID);
+        this.coms.on("INFO", this.onINFO);
+        this.coms.on("CHN,1", this.onCHN);
     }
 
     /**
@@ -139,14 +143,12 @@ export class MHRCWMP1 extends EventEmitter implements Device {
      * @returns Object containing device information such as firmware version
      */
     public async getInfo(): Promise<Record<string, string>> {
-        //const result = await this.httpRequest("getinfo", {})
         try {
             await this.waitForEvent(this, "onIDUpd");
         } catch (ex) {
-            console.log("async failed with", ex);
+            console.log("async ID update failed with", ex);
         }
-        this.log.debug("identity ",this.identity)
-        return JSON.parse(this.identity)
+        return this.identity
     }
 
     /**
@@ -429,9 +431,72 @@ export class MHRCWMP1 extends EventEmitter implements Device {
         const [model, wlanSTAMAC, ip, protocol, fwVersion, rssi, name] = id.split(",");
         this.identity = {model, wlanSTAMAC, ip, protocol, fwVersion, rssi, name};
         this.identity.sn = wlanSTAMAC
-        this.log.debug("id recieved: ",this.identity)
         this.emit("onIDUpd")
-      }
+    }
+
+    private onINFO = (name, value) => {
+        this.info[name] = value;
+    }
+    
+    private onCHN = (name, value) => {
+        if (name == "ONOFF") {
+          this.state.onoff = value;
+          if (value == "ON" ) {
+            this.log.debug("Device turned ON")
+          } else if (value == "OFF") {
+            this.log.debug("Device turned OFF")
+          } else {
+            this.log.warn("Unknown ONOFF value:", value)
+          }
+        } else if (name == "MODE") {
+          this.state.mode = value;
+          if (value == "AUTO" ) {
+            this.log.debug("Device set to AUTO mode")
+            if (this.state.onoff == "ON") {
+                this.log.debug("dosomething")
+            }
+          } else if (value == "HEAT") {
+            this.log.debug("Device set to HEAT mode")
+            if (this.state.onoff == "ON") {
+                this.log.debug("dosomething")
+            }
+          } else if (value == "COOL") {
+            this.log.debug("Device set to COOL mode")
+            if (this.state.onoff == "ON") {
+                this.log.debug("dosomething")
+            }
+          } else if (value == "FAN") {
+            this.log.debug("Device set to FAN mode (unsupported in HomeKit)")
+          } else if (value == "DRY") {
+            this.log.debug("Device set to DRY mode (unsupported in HomeKit)")
+          } else {
+            this.log.warn("Device set to unknown mode:", value)
+          }
+        } else if (name == "SETPTEMP") {
+          this.state.setptemp = value;
+          this.log.debug("Device target temperature set to:", value);
+          this.log.debug("dosomething")
+        } else if (name == "FANSP") {
+          this.state.fansp = value;
+          this.log.debug("Device fanspeed set to:", value);
+        } else if (name == "VANEUD") {
+          this.state.vaneud = value;
+          this.log.debug("Device vertical vane set to:", value);
+        } else if (name == "VANELR") {
+          this.state.vanelr = value;
+          this.log.debug("Device horizontal vane set to:", value);
+        } else if (name == "ERRSTATUS") {
+          this.state.errstatus = value;
+          this.log.debug("Device error status:", value);
+        } else if (name == "ERRCODE") {
+          this.state.errcode = value;
+          this.log.debug("Device error code:", value);
+        } else if (name == "AMBTEMP") {
+          this.state.ambtemp = value;
+          this.log.debug("Device ambient temperature now:", value);
+          this.log.debug("dosomething")
+        }
+    }
 
 
     waitForEvent<T>(emitter: EventEmitter, event: string): Promise<T> {
@@ -458,9 +523,11 @@ class MHRCWMP1_connect extends EventEmitter {
     private number = 1
     socket;
     buffer: string;
+    private timerId!: NodeJS.Timeout;
 
     private constructor(private log: Logger, private host: string){
         super()
+        //this.timerId = setInterval(() => this.send("PING"), 50000)
         this.log.debug(`Created connect class`)
         this.buffer = "";
         this.connect();
@@ -488,6 +555,10 @@ class MHRCWMP1_connect extends EventEmitter {
     
         // Ask for the initial state
         this.sendGET("*");
+
+        //start ping to keep socket open
+         this.timerId = setInterval(() => this.send("PING"), 50000);
+
     }
 
     private onSocketData = (data) => {
@@ -533,6 +604,7 @@ class MHRCWMP1_connect extends EventEmitter {
 
     private onSocketClose = () => {
         this.log.warn("Connection closed, reconnecting in 5 seconds");
+        clearInterval(this.timerId)
         setTimeout(() => {
             this.connect();
         }, 5000);

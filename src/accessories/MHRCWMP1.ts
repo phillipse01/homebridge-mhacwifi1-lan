@@ -70,16 +70,16 @@ export class MHRCWMP1 extends EventEmitter implements Device {
      * Public API for getting state values
      */
     public get = {
-        active: (): number => this.state.active,
-        currentTemperature: (): number => this.state.currentTemperature,
-        fanSpeed: (): number => this.state.fanSpeed,
-        locked: (): number => this.state.remoteDisable,
+        active: (): number => this.state.onoff,
+        currentTemperature: (): number => this.state.ambtemp,
+        fanSpeed: (): number => this.state.fansp,
+        locked: (): number => 0, //no locked mode
         maxSetpoint: (): number => this.state.maxSetpoint,
         minSetpoint: (): number => this.state.minSetpoint,
         mode: (): number => this.state.mode,
         outdoorTemperature: (): number => this.state.outdoorTemperature,
-        setpoint: (): number => this.state.setpoint,
-        swingMode: (): number => (this.state.verticalPosition == 10) ? 1 : 0,
+        setpoint: (): number => this.state.setptemp,
+        swingMode: (): number => (this.state.vaneud == 10) ? 1 : 0,
         valid: (): boolean => typeof this.state.active !== "undefined",
     };
 
@@ -95,7 +95,7 @@ export class MHRCWMP1 extends EventEmitter implements Device {
             this.setState('fansp', value);
         },
         locked: async (value: number): Promise<void> => {
-            this.setState('remoteDisable', value);
+            //this.setState('remoteDisable', value);
         },
         maxSetpoint: async (value: number): Promise<void> => {
             this.setState('maxSetpoint', value);

@@ -80,7 +80,9 @@ export class MHRCWMP1 extends EventEmitter implements Device {
         outdoorTemperature: (): number => this.state.outdoorTemperature,
         setpoint: (): number => this.state.setptemp,
         swingMode: (): number => (this.state.vaneud == 10) ? 1 : 0,
-        valid: (): boolean => typeof this.state.active !== "undefined",
+        valid: (): boolean => {
+            this.log.debug(this.state)
+            return typeof this.state.active !== "undefined"},
     };
 
     /**

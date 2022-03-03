@@ -80,9 +80,7 @@ export class MHRCWMP1 extends EventEmitter implements Device {
         outdoorTemperature: (): number => this.state.outdoorTemperature,
         setpoint: (): number => this.state.setptemp,
         swingMode: (): number => (this.state.vaneud == 10) ? 1 : 0,
-        valid: (): boolean => {
-            //this.log.debug(this.state)
-            return typeof this.state.onoff !== "undefined"},
+        valid: (): boolean => typeof this.state.onoff !== "undefined",
     };
 
     /**
@@ -165,9 +163,9 @@ export class MHRCWMP1 extends EventEmitter implements Device {
         this.log.debug("Full refresh of state")
         await this.coms.sendGET("*");
         //try {
-        //    await this.waitForEvent(this, "onCHNUpd",30000);
+        //   await this.waitForEvent(this, "onCHNUpd",30000);
         //} catch (ex) {
-        //    console.log("async CHN full update failed with ", ex);
+        //   console.log("async CHN full update failed with ", ex);
         //}
     }
 
@@ -284,7 +282,7 @@ export class MHRCWMP1 extends EventEmitter implements Device {
             const xvalue2 = map2.xform ? map2.xform(this.state.maxSetpoint) : this.state.maxSetpoint
             command = `LIMITS:SETPTEMP,[${xvalue},${xvalue2}]`
         } else {
-            command = `SET,1:${attr},${value}`
+            command = `SET,1:${attr},${xvalue}`
         }
         this.coms.send(command)
 
@@ -566,6 +564,7 @@ const SensorConfigMap = [
             "cool": 4,
         },
         toVal: (v: number) => { 
+            this.log.debug("")
             switch(v){
                 case 0: return "auto"
                 case 1: return "heat"

@@ -141,7 +141,6 @@ export class MHRCWMP1 extends EventEmitter implements Device {
      * @returns Object containing device information such as firmware version
      */
     public async getInfo(): Promise<Record<string, string>> {
-        this.log.warn(`LENGTH: ${this.identity.length}`)
         if (this.identity == undefined) {
             try {
                 await this.waitForEvent(this, "onIDUpd");

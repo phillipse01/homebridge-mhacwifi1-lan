@@ -25,12 +25,17 @@ export class AirconAccessory {
         config: PlatformConfig,
     ) {
         const Characteristic = platform.Characteristic
+        platform.log.debug("1. construct accessory")
+
         device.on(EVENT_UPDATED, this.updateHomeBridgeState.bind(this))
+        platform.log.debug("2. add event")
 
         const MODEL = device.MODEL
+        platform.log.debug("3. device model")
 
         // set accessory information
         const service = accessory.getService(platform.Service.AccessoryInformation)
+        platform.log.debug("4. get service")
         if (service) {
             service
                 .setCharacteristic(Characteristic.Identify, false)
@@ -38,15 +43,20 @@ export class AirconAccessory {
                 .setCharacteristic(Characteristic.Model, MODEL)
                 .setCharacteristic(Characteristic.SerialNumber, config.info.sn)
                 .setCharacteristic(Characteristic.FirmwareRevision, config.info.fwVersion)
+            platform.log.debug("5. set service")
         }
 
         // Add the relavant accessories
         this.aircon = new AirconService(platform, accessory, device)
+        platform.log.debug("6. new aircon")
         this.fan = new FanService(platform, accessory, device)
+        platform.log.debug("7. new fan")
         this.dehumidifier = new DehumidifierService(platform, accessory, device)
+        platform.log.debug("7. new humid")
     }
 
     async updateHomeBridgeState(): Promise<void> {
+        console.log("Updated called! :)")
         this.aircon.updateHomeBridgeState()
         this.fan.updateHomeBridgeState()
         this.dehumidifier.updateHomeBridgeState()

@@ -162,11 +162,11 @@ export class MHRCWMP1 extends EventEmitter implements Device {
     public async refreshState(): Promise<void>  {
         // force all sensor data
         this.coms.sendGET("*");
-        try {
-            await this.waitForEvent(this, "onCHNUpd",30000);
-        } catch (ex) {
-            console.log("async CHN full update failed with ", ex);
-        }
+        //try {
+        //    await this.waitForEvent(this, "onCHNUpd",30000);
+        //} catch (ex) {
+        //    console.log("async CHN full update failed with ", ex);
+        //}
     }
 
     /**
@@ -341,8 +341,6 @@ export class MHRCWMP1 extends EventEmitter implements Device {
     
     private onCHN = (name, value) => {
         this.log.debug("INCOMING STATE:")
-        const id = this.sensorMap[name.toString().toLowerCase()].uid;
-        const chnData: SensorType = { uid: id, value: value}
 
         if (name == "ONOFF") {
           if (value == "ON" ) {
@@ -386,6 +384,8 @@ export class MHRCWMP1 extends EventEmitter implements Device {
           this.log.debug("Device ambient temperature now:", value);
           this.log.debug("dosomething")
         }
+        const id = this.sensorMap[name.toString().toLowerCase()].uid;
+        const chnData: SensorType = { uid: id, value: value}
         this.emit("onCHNUpd")
         this.parseState(chnData)
     }

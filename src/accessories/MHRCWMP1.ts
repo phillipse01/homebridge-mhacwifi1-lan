@@ -163,7 +163,7 @@ export class MHRCWMP1 extends EventEmitter implements Device {
         // force all sensor data
         this.coms.sendGET("*");
         try {
-            await this.waitForEvent(this, "onCHNUpd");
+            await this.waitForEvent(this, "onCHNUpd",30000);
         } catch (ex) {
             console.log("async CHN full update failed with ", ex);
         }
@@ -227,18 +227,16 @@ export class MHRCWMP1 extends EventEmitter implements Device {
      *
      * @param states
      */
-    private parseState(sensors: SensorType[]): void {
-        sensors.forEach(item => {
-            const map = this.sensorMap[item.uid];
-            if (!map) {
-                this.log.error('Unhandled sensor item', item);
-                return;
-            }
-            if (!map.attr) {
-                return;
-            }
-            this.state[map.attr] = map.xform ? map.xform(item.value) : item.value;
-        });
+    private parseState(item: SensorType): void {
+        const map = this.sensorMap[item.uid];
+        if (!map) {
+            this.log.error('Unhandled sensor item', item);
+            return;
+        }
+        if (!map.attr) {
+            return;
+        }
+        this.state[map.attr] = map.xform ? map.xform(item.value) : item.value;
         this.checkForChange()
     }
 
@@ -343,10 +341,8 @@ export class MHRCWMP1 extends EventEmitter implements Device {
     
     private onCHN = (name, value) => {
         this.log.debug("INCOMING STATE:")
-        let chnData
         const id = this.sensorMap[name.toString().toLowerCase()].uid;
-        chnData.uid = id;
-        chnData.value = value;
+        const chnData: SensorType = { uid: id, value: value}
 
         if (name == "ONOFF") {
           if (value == "ON" ) {

@@ -99,7 +99,7 @@ export class AirconService {
         this.checkValid()
         const active = this.device.get.active();
         const mode = this.device.get.mode();
-        this.platform.log(`state: ${active}, ${mode}`)
+        this.platform.log.debug(`state: ${active}, ${mode}`)
         return (active && [MhacModeTypes.AUTO, MhacModeTypes.COOL, MhacModeTypes.HEAT].includes(mode)) ?
             this.platform.Characteristic.Active.ACTIVE : this.platform.Characteristic.Active.INACTIVE;
     }

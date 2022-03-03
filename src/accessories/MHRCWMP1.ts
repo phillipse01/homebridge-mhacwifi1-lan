@@ -70,7 +70,10 @@ export class MHRCWMP1 extends EventEmitter implements Device {
      * Public API for getting state values
      */
     public get = {
-        active: (): number => this.state.onoff,
+        active: (): number => {
+            this.log.debug(this.state)
+            return this.state.onoff
+        },
         currentTemperature: (): number => this.state.ambtemp,
         fanSpeed: (): number => this.state.fansp,
         locked: (): number => 0, //no locked mode

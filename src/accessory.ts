@@ -8,7 +8,6 @@ import { MitsubishiHeavyAirconPlatform } from './platform'
 
 
 const MANUFACTURER = "Mitsubishi Heavy Industries"
-const MODEL = "MH-AC-WIFI-1"
 
 /**
  * Homebridge accessory class containing indoor aircon related services
@@ -27,6 +26,8 @@ export class AirconAccessory {
     ) {
         const Characteristic = platform.Characteristic
         device.on(EVENT_UPDATED, this.updateHomeBridgeState.bind(this))
+
+        const MODEL = device.MODEL
 
         // set accessory information
         const service = accessory.getService(platform.Service.AccessoryInformation)
@@ -68,6 +69,8 @@ export class OutdoorTemperatureAccessory {
     ) {
         const Characteristic = platform.Characteristic
         device.on(EVENT_UPDATED, this.updateHomeBridgeState.bind(this))
+        
+        const MODEL = device.MODEL
 
         // set accessory information
         const service = accessory.getService(platform.Service.AccessoryInformation)

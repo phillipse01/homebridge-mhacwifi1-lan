@@ -1,10 +1,7 @@
 import { EventEmitter } from 'events';
 import { Logger } from 'homebridge';
 import net from 'net';
-import * as http from 'http';
-import { SensorType, EVENT_CHANGED, EVENT_UPDATED, SensorConfigMap, Device } from './device';
-
-type CommandResponseType = any;         // eslint-disable-line @typescript-eslint/no-explicit-any
+import { SensorType, EVENT_CHANGED, EVENT_UPDATED, Device } from './device';
 
 /**
  * Hardware interface class for the MH-RC-WMP-1
@@ -25,7 +22,8 @@ type CommandResponseType = any;         // eslint-disable-line @typescript-eslin
  */
 export class MHRCWMP1 extends EventEmitter implements Device {
 
-    private sessionID = ""
+    public  MODEL = "MH-RC-WMP-1"
+    private isInitialSynced = false
     private syncTimeout: NodeJS.Timeout | null = null
 
     private sensorMap: any = {}             // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -92,10 +90,10 @@ export class MHRCWMP1 extends EventEmitter implements Device {
      */
     public set = {
         active: async (value: number): Promise<void> => {
-            this.setState('active', value);
+            this.setState('onoff', value);
         },
         fanSpeed: async (value: number): Promise<void> => {
-            this.setState('fanSpeed', value);
+            this.setState('fansp', value);
         },
         locked: async (value: number): Promise<void> => {
             this.setState('remoteDisable', value);
@@ -110,13 +108,13 @@ export class MHRCWMP1 extends EventEmitter implements Device {
             this.setState('mode', value);
         },
         setpoint: async (value: number): Promise<void> => {
-            this.setState('setpoint', value);
+            this.setState('setptemp', value);
         },
         swingMode: async (value: number): Promise<void> => {
             if (value) {
-                this.setState('verticalPosition', 10);
+                this.setState('vaneud', 10);
             } else {
-                this.setState('verticalPosition', 4);
+                this.setState('vaneud', 4);
             }
         }
     }
@@ -138,58 +136,20 @@ export class MHRCWMP1 extends EventEmitter implements Device {
     }
 
     /**
-     * Requests hardware configuration information from the device
+     * Requests hardware configuration information from the device. Specifically:
+     * model, wlanSTAMAC, ip, protocol, fwVersion, rssi, name, sn
      *
      * @returns Object containing device information such as firmware version
      */
     public async getInfo(): Promise<Record<string, string>> {
-        try {
-            await this.waitForEvent(this, "onIDUpd");
-        } catch (ex) {
-            console.log("async ID update failed with", ex);
+        if (this.identity.length == 0) {
+            try {
+                await this.waitForEvent(this, "onIDUpd");
+            } catch (ex) {
+                console.log("async ID update failed with ", ex);
+            }
         }
         return this.identity
-    }
-
-    /**
-     * Performs login with the device
-     *
-     * @returns Session ID if login is successful
-     */
-    public async login(): Promise<string> {
-        const result = await this.httpRequest("login", { username: this.username, password: this.password })
-        this.sessionID = result.id.sessionID
-        this.previousState = {}
-        this.state = {}
-        return result.id.sessionID
-    }
-
-    /**
-     * Performs device logout
-     */
-    public async logout(): Promise<void> {
-        await this.httpRequest("logout");
-        this.resetState()
-    }
-
-    /**
-     * Returns the services that are currently available
-     *
-     * @returns List of service commands available on device
-     */
-    public async getAvailableServices(): Promise<string[]> {
-        const result = await this.httpRequest("getavailableservices")
-        return result.userinfo.servicelist
-    }
-
-    /**
-     * Returns the services that are currently available
-     *
-     * @returns List of service commands available on device
-     */
-    public async getAvailableDatapoints(): Promise<Record<string, unknown>> {
-        const result = await this.httpRequest("getavailabledatapoints")
-        return result.dp.datapoints
     }
 
     /**
@@ -200,76 +160,53 @@ export class MHRCWMP1 extends EventEmitter implements Device {
      *
      */
     public async refreshState(): Promise<void>  {
-        const result = await this.httpRequest("getdatapointvalue", { uid: "all" })
-        this.parseState(result.dpval)
+        // force all sensor data
+        this.coms.sendGET("*");
+        try {
+            await this.waitForEvent(this, "onCHNUpd");
+        } catch (ex) {
+            console.log("async CHN update failed with ", ex);
+        }
     }
 
     /**
      * Reads all sensors values from the device and caches them into the `state` variable.
      */
     private async syncState() {
-        if (!this.sessionID) {
-            this.log.debug('Logging in to obtain a session ID')
-            await this.login()
-                .then(() => {
-                    this.log.debug('Obtained a new session ID')
-                })
+        if (!this.isInitialSynced) {
+            this.log.debug('Initial sync started')
+            //reset some variables
+            this.previousState = {}
+            this.state = {}
+            this.isInitialSynced = true
+
+            // Set sane defaults
+            await this.set.minSetpoint(this.minSetpoint)
                 .catch(error => {
-                    this.log.error('Unable to authenticate', error)
-                    this.resetState()
+                    this.log.error('Unable to get set minSetpoint value', error)
                 })
-            if (this.sessionID) {
-                await this.getAvailableServices()
-                    .then((result) => {
-                        this.log.debug(`Available services: ${JSON.stringify(result)}`)
-                    })
-                    .catch(error => {
-                        this.log.error('Unable to get available services', error)
-                        this.resetState()
-                    })
-
-                await this.getAvailableDatapoints()
-                    .then((result) => {
-                        this.log.debug(`Available datapoints: ${JSON.stringify(result)}`)
-                    })
-                    .catch(error => {
-                        this.log.error('Unable to get available services', error)
-                        this.resetState()
-                    })
-
-                // Set sane defaults
-                await this.set.minSetpoint(this.minSetpoint)
-                    .catch(error => {
-                        this.log.error('Unable to get set minSetpoint value', error)
-                    })
-                await this.set.maxSetpoint(this.maxSetpoint)
-                    .catch(error => {
-                        this.log.error('Unable to get set maxSetpoint value', error)
-                    })
-            }
+            await this.set.maxSetpoint(this.maxSetpoint)
+                .catch(error => {
+                    this.log.error('Unable to get set maxSetpoint value', error)
+                })
         }
 
-        let syncPeriod = this.syncPeriod
+        const syncPeriod = this.syncPeriod
 
-        if (this.sessionID) {
-            // this.log.debug('Refreshing state')
-            const start = Date.now()
-            await this.refreshState()
-                .then(() => {
-                    const query_time = Date.now() - start;
-                    if (query_time > this.slowThreshold) {
-                        this.log.warn(`Slow response time from ${this.host} query time ${query_time}ms`);
-                    }
-                    this.checkForChange()
-                })
-                .catch(error => {
-                    this.log.error('Unable to refresh state', error);
-                    this.resetState()
-                });
-        } else {
-            // Not logged in. slow down the polling
-            syncPeriod = 30000
-        }
+        // this.log.debug('Refreshing state')
+        const start = Date.now()
+        await this.refreshState()
+            .then(() => {
+                const query_time = Date.now() - start;
+                if (query_time > this.slowThreshold) {
+                    this.log.warn(`Slow response time from ${this.host} query time ${query_time}ms`);
+                }
+                this.checkForChange()
+            })
+            .catch(error => {
+                this.log.error('Unable to refresh state', error);
+                this.resetState()
+        });
 
         this.syncTimeout = setTimeout(async () => { this.syncState() }, syncPeriod)
     }
@@ -278,7 +215,7 @@ export class MHRCWMP1 extends EventEmitter implements Device {
      * Clears all state information and sessionID
      */
     private resetState(): void {
-        this.sessionID = "";
+        this.isInitialSynced = false;
         this.previousState = {}
         this.state = {}
     }
@@ -334,73 +271,35 @@ export class MHRCWMP1 extends EventEmitter implements Device {
         const map = this.sensorMap[attr];
         const xvalue = map.xform ? map.xform(value) : value
         this.log.debug(`setState attr=${attr}, uid=${map.uid}, value=${xvalue}`);
-        await this.httpRequest("setdatapointvalue", { uid: map.uid, value: xvalue });
+        if(attr == "maxSetpoint") {
+            const map2 = this.sensorMap["minSetpoint"];
+            const xvalue2 = map2.xform ? map2.xform(value) : value
+            const command = `LIMITS:SETPTEMP,[${xvalue2},${xvalue}]`
+            this.coms.send(command)
+        } else if (attr == "minSetpoint") {
+            const map2 = this.sensorMap["maxSetpoint"];
+            const xvalue2 = map2.xform ? map2.xform(value) : value
+            const command = `LIMITS:SETPTEMP,[${xvalue},${xvalue2}]`
+            this.coms.send(command)
+        } else {
+            this.coms.send(`SET,1:${attr},${value}`)
+        }
+        try {
+            await this.waitForEvent(this.coms, "ACK");
+        } catch (ex) {
+            console.log("async setState failed to confim change with ", ex);
+        }
         this.state[attr] = value;
         this.checkForChange()
     }
 
     /**
-     * Sends an HTTP POST request to the device with the given command
-     *
-     * This function takes care of adding sessionID credentials to the request
-     * from current login.  Returned result is the "data" field in the
-     * response json payload.
-     *
-     * @param command   Command for the request
-     * @param data      Parameters associated with the command
-     * @returns         JSON data returned by the device
-     */
-    private httpRequest(command: string, data: Record<string, unknown> = {}) {
-        if (command != "getdatapointvalue") {
-            // Log before adding credentials
-            this.log.debug(`httpRequest: ${command} ${JSON.stringify(data)}`)
-        }
-        data['sessionID'] = this.sessionID
-        const payload = JSON.stringify({ command: command, data: data })
-
-        const options = {
-            hostname: this.host,
-            path: "/api.cgi",
-            method: "POST",
-            headers: {
-                "Content-Length": payload.length,
-                "Content-Type": "application/json"
-            }
-        }
-
-        return new Promise<CommandResponseType>((resolve, reject) => {
-            const req = http.request(options, (res) => {
-                if (res.statusCode != 200) {
-                    this.log.debug(`Received http error code ${res.statusCode} for ${command}`)
-                    reject({ code: res.statusCode, message: "Invalid HTTP response" })
-                }
-
-                const buffer: string[] = []
-                res.on("data", (chunk: string) => buffer.push(chunk));
-                res.on("end", () => {
-                    const content = buffer.join("").toString()
-                    const result = JSON.parse(content)
-                    if (result.success) {
-                        resolve(result.data)
-                    } else {
-                        this.log.debug(`Received http error response: ${content}`)
-                        reject(result)
-                    }
-                });
-            });
-
-            req.on("error", (error) => {
-                this.log.error(`Http request error: ${error}`)
-                reject(error)
-            });
-            req.write(payload)
-            req.end()
-        });
-    }
-
-    /**
      * Converts the SensorCOnfigMap into a two-way translation structure for converting
      * uid <-> attrName and human-values <-> machine-values.
+     * 
+     * The object sensormap has two sections. Accessing sensorMap[sensor.uid] is for 
+     * getting the human value from machine (fromVal), while accessing sensorMap[sensor.uid] 
+     * is for getting machine values from human (toVal).
      */
     private _buildSensorMap() {
         SensorConfigMap.forEach(sensor => {
@@ -439,8 +338,13 @@ export class MHRCWMP1 extends EventEmitter implements Device {
     }
     
     private onCHN = (name, value) => {
+        this.log.debug("INCOMING STATE:")
+        let chnData
+        const id = this.sensorMap[name.tolowercase()].uid;
+        chnData.uid = id;
+        chnData.value = value;
+
         if (name == "ONOFF") {
-          this.state.onoff = value;
           if (value == "ON" ) {
             this.log.debug("Device turned ON")
           } else if (value == "OFF") {
@@ -449,22 +353,12 @@ export class MHRCWMP1 extends EventEmitter implements Device {
             this.log.warn("Unknown ONOFF value:", value)
           }
         } else if (name == "MODE") {
-          this.state.mode = value;
           if (value == "AUTO" ) {
             this.log.debug("Device set to AUTO mode")
-            if (this.state.onoff == "ON") {
-                this.log.debug("dosomething")
-            }
           } else if (value == "HEAT") {
             this.log.debug("Device set to HEAT mode")
-            if (this.state.onoff == "ON") {
-                this.log.debug("dosomething")
-            }
           } else if (value == "COOL") {
             this.log.debug("Device set to COOL mode")
-            if (this.state.onoff == "ON") {
-                this.log.debug("dosomething")
-            }
           } else if (value == "FAN") {
             this.log.debug("Device set to FAN mode (unsupported in HomeKit)")
           } else if (value == "DRY") {
@@ -473,50 +367,70 @@ export class MHRCWMP1 extends EventEmitter implements Device {
             this.log.warn("Device set to unknown mode:", value)
           }
         } else if (name == "SETPTEMP") {
-          this.state.setptemp = value;
           this.log.debug("Device target temperature set to:", value);
           this.log.debug("dosomething")
         } else if (name == "FANSP") {
-          this.state.fansp = value;
           this.log.debug("Device fanspeed set to:", value);
         } else if (name == "VANEUD") {
-          this.state.vaneud = value;
           this.log.debug("Device vertical vane set to:", value);
         } else if (name == "VANELR") {
-          this.state.vanelr = value;
+          return //not supported yet
           this.log.debug("Device horizontal vane set to:", value);
         } else if (name == "ERRSTATUS") {
-          this.state.errstatus = value;
+          return //not supported yet
           this.log.debug("Device error status:", value);
         } else if (name == "ERRCODE") {
-          this.state.errcode = value;
+          return //not supported yet
           this.log.debug("Device error code:", value);
         } else if (name == "AMBTEMP") {
-          this.state.ambtemp = value;
           this.log.debug("Device ambient temperature now:", value);
           this.log.debug("dosomething")
         }
+        this.emit("onCHNUpd")
+        this.parseState(chnData)
     }
 
 
-    waitForEvent<T>(emitter: EventEmitter, event: string): Promise<T> {
+    waitForEvent<T>(emitter: EventEmitter, event: string, timeoutMS = 10000): Promise<T> {
         return new Promise((resolve, reject) => {
+            const timeoutId = setTimeout(() => {
+                reject(new Error(`timeout waiting for event: ${event}`)) 
+              }, timeoutMS)         
+
             const success = (val: T) => {
                 emitter.off("error", fail);
+                clearTimeout(timeoutId);
                 resolve(val);
             };
             const fail = (err: Error) => {
                 emitter.off(event, success);
+                clearTimeout(timeoutId);
                 reject(err);
             };
             emitter.once(event, success);
             emitter.once("error", fail);
         });
     }
-
-
 }
 
+/**
+ * Hardware connection class for the MH-RC-WMP-1
+ *
+ * This singleton class handles all the direct communication with the 
+ * WMP protocol. This is split out to be a singleton as the WMP intesis
+ * devices has a MAXCONN of 2 - so we want to ensure there is only ever
+ * one connection.
+ * 
+ * The WMP protocol also closes the connection after 1~2 minutes of no
+ * commands recieved. We send a periodic PING command to ensure the 
+ * socket stays open.
+ * 
+ * This class emits events when it recieves data can be listened and acted on:
+ *  - ID: identify
+ *  - INFO: info
+ *  - ACK: Acknowledge command
+ *  - CHN,1: Recieved change of state
+ */
 class MHRCWMP1_connect extends EventEmitter {
 
     static instance: MHRCWMP1_connect
@@ -538,6 +452,26 @@ class MHRCWMP1_connect extends EventEmitter {
             MHRCWMP1_connect.instance = new MHRCWMP1_connect(log,host);
         }
         return MHRCWMP1_connect.instance;
+    }
+
+    public send(command) {
+        this.log.debug("Send:", command);
+        this.socket.write(command + "\r\n");
+    }
+    
+    public sendID() {
+        this.send("ID");
+    }
+    
+    public sendINFO(callback) {
+        if (callback) {
+          this.once("INFO", function(value) { callback(null, value) });
+        }
+        this.send("INFO");
+    }
+    
+    public sendGET(name) {
+        this.send("GET," + this.number + ":" + name);
     }
 
     private connect() {
@@ -610,24 +544,151 @@ class MHRCWMP1_connect extends EventEmitter {
         }, 5000);
     }
 
-    private send(command) {
-        this.log.debug("Send:", command);
-        this.socket.write(command + "\r\n");
-    }
-    
-    private sendID() {
-        this.send("ID");
-    }
-    
-    private sendINFO(callback) {
-        if (callback) {
-          this.once("INFO", function(value) { callback(null, value) });
-        }
-        this.send("INFO");
-    }
-    
-    private sendGET(name) {
-        this.send("GET," + this.number + ":" + name);
-    }
-
 }
+
+const SensorConfigMap = [
+    {
+        uid: 1,
+        attr: "onoff",
+        values: {
+            0: "off",
+            1: "on",
+        }
+    },
+    {
+        uid: 2,
+        attr: "mode",
+        values: {
+            "auto": 0,
+            "heat": 1,
+            "dry": 2,
+            "fan": 3,
+            "cool": 4,
+        },
+        toVal: (v: number) => { 
+            switch(v){
+                case 0: return "auto"
+                case 1: return "heat"
+                case 2: return "dry"
+                case 3: return "fan"
+                case 4: return "cool"
+                default: return "auto"
+            }
+         },
+        fromVal: (v: any) => {  // eslint-disable-line @typescript-eslint/no-explicit-any
+            switch(v){
+                case "auto": return 0
+                case "heat": return 1
+                case "dry": return 2
+                case "fan": return 3
+                case "cool": return 4
+                default: return 0
+            }
+         }
+    },
+    {
+        uid: 4,
+        attr: "fansp",
+        values: {
+            "quiet": 1,
+            "low": 2,
+            "medium": 3,
+            "high": 4,
+        }
+    },
+    {
+        uid: 5,
+        attr: "vaneud",
+        values: {
+            "auto": 0,
+            "pos-1": 1,
+            "pos-2": 2,
+            "pos-3": 3,
+            "pos-4": 4,
+            "pos-5": 5,
+            "pos-6": 6,
+            "pos-7": 7,
+            "pos-8": 8,
+            "pos-9": 9,
+            "swing": 10,
+            "swirl": 11,
+            "wide": 12
+        },
+        toVal: (v: number) => { 
+            if (v == 0) return "auto"
+            if (v == 10) return "swing"
+            return v
+         },
+        fromVal: (v: any) => {  // eslint-disable-line @typescript-eslint/no-explicit-any
+            if (v == "auto") return 0
+            if (v == "swing") return 10
+            return v
+         }
+    },
+    {
+        uid: 9,
+        attr: 'setptemp',
+        fromVal: (v: number) => { if (v == 32768) { return 28; } else { return v / 10.0 } },
+        toVal: (v: number) => { return v * 10.0 },
+    },
+    {
+        uid: 10,
+        attr: 'ambtemp',
+        fromVal: (v: number) => { return v / 10.0 },
+    },
+    {
+        uid: 12,
+        attr: 'remoteDisable',
+        values: {
+            0: "off",
+            1: "on",
+        }
+    },
+    {
+        uid: 13,
+        attr: 'onTime',
+        // Number of hours the unit has been on
+    },
+    {
+        uid: 14,
+        attr: 'alarmStatus',
+        values: {
+            0: "off",
+            1: "on",
+        }
+    },
+    {
+        uid: 15,
+        attr: 'errorCode',
+        // Error status code
+    },
+    {
+        uid: 34,
+        attr: 'quietMode',
+        values: {
+            0: "off",
+            1: "on",
+        }
+    },
+    {
+        uid: 35,
+        attr: 'minSetpoint',
+        toVal: (v: number) => { return v * 10.0 },
+        fromVal: (v: number) => { return v / 10.0 },
+    },
+    {
+        uid: 36,
+        attr: 'maxSetpoint',
+        toVal: (v: number) => { return v * 10.0 },
+        fromVal: (v: number) => { return v / 10.0 },
+    },
+    {
+        uid: 37,
+        attr: 'outdoorTemperature',
+        fromVal: (v: number) => { return v / 10.0 },
+    },
+    { uid: 181 },       // ignore this code
+    { uid: 182 },       // ignore this code
+    { uid: 183 },       // ignore this code
+    { uid: 184 },       // ignore this code
+]

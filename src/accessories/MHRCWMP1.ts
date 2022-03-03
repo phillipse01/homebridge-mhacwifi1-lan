@@ -237,6 +237,7 @@ export class MHRCWMP1 extends EventEmitter implements Device {
             }
             this.state[map.attr] = map.xform ? map.xform(item.value) : item.value;
         });
+        this.checkForChange()
     }
 
     /**
@@ -273,12 +274,12 @@ export class MHRCWMP1 extends EventEmitter implements Device {
         this.log.debug(`setState attr=${attr}, uid=${map.uid}, value=${xvalue}`);
         if(attr == "maxSetpoint") {
             const map2 = this.sensorMap["minSetpoint"];
-            const xvalue2 = map2.xform ? map2.xform(value) : value
+            const xvalue2 = map2.xform ? map2.xform(this.state.minSetpoint) : this.state.minSetpoint
             const command = `LIMITS:SETPTEMP,[${xvalue2},${xvalue}]`
             this.coms.send(command)
         } else if (attr == "minSetpoint") {
             const map2 = this.sensorMap["maxSetpoint"];
-            const xvalue2 = map2.xform ? map2.xform(value) : value
+            const xvalue2 = map2.xform ? map2.xform(this.state.maxSetpoint) : this.state.maxSetpoint
             const command = `LIMITS:SETPTEMP,[${xvalue},${xvalue2}]`
             this.coms.send(command)
         } else {
@@ -289,8 +290,8 @@ export class MHRCWMP1 extends EventEmitter implements Device {
         } catch (ex) {
             console.log("async setState failed to confim change with ", ex);
         }
-        this.state[attr] = value;
-        this.checkForChange()
+        //this.state[attr] = value; doing a set returns with a CHN confirmation - not needed
+        //this.checkForChange()
     }
 
     /**
@@ -340,7 +341,7 @@ export class MHRCWMP1 extends EventEmitter implements Device {
     private onCHN = (name, value) => {
         this.log.debug("INCOMING STATE:")
         let chnData
-        const id = this.sensorMap[name.toString().tolowercase()].uid;
+        const id = this.sensorMap[name.toString().toLowerCase()].uid;
         chnData.uid = id;
         chnData.value = value;
 

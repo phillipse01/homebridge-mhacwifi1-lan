@@ -165,7 +165,7 @@ export class MHRCWMP1 extends EventEmitter implements Device {
         try {
             await this.waitForEvent(this, "onCHNUpd");
         } catch (ex) {
-            console.log("async CHN update failed with ", ex);
+            console.log("async CHN full update failed with ", ex);
         }
     }
 
@@ -179,6 +179,8 @@ export class MHRCWMP1 extends EventEmitter implements Device {
             this.previousState = {}
             this.state = {}
             this.isInitialSynced = true
+            this.state.minSetpoint = this.minSetpoint
+            this.state.maxSetpoint = this.maxSetpoint
 
             // Set sane defaults
             await this.set.minSetpoint(this.minSetpoint)
@@ -272,23 +274,24 @@ export class MHRCWMP1 extends EventEmitter implements Device {
         const map = this.sensorMap[attr];
         const xvalue = map.xform ? map.xform(value) : value
         this.log.debug(`setState attr=${attr}, uid=${map.uid}, value=${xvalue}`);
+        let command: string
         if(attr == "maxSetpoint") {
             const map2 = this.sensorMap["minSetpoint"];
             const xvalue2 = map2.xform ? map2.xform(this.state.minSetpoint) : this.state.minSetpoint
-            const command = `LIMITS:SETPTEMP,[${xvalue2},${xvalue}]`
-            this.coms.send(command)
+            command = `LIMITS:SETPTEMP,[${xvalue2},${xvalue}]`
         } else if (attr == "minSetpoint") {
             const map2 = this.sensorMap["maxSetpoint"];
             const xvalue2 = map2.xform ? map2.xform(this.state.maxSetpoint) : this.state.maxSetpoint
-            const command = `LIMITS:SETPTEMP,[${xvalue},${xvalue2}]`
-            this.coms.send(command)
+            command = `LIMITS:SETPTEMP,[${xvalue},${xvalue2}]`
         } else {
-            this.coms.send(`SET,1:${attr},${value}`)
+            command = `SET,1:${attr},${value}`
         }
+        this.coms.send(command)
+
         try {
             await this.waitForEvent(this.coms, "ACK");
         } catch (ex) {
-            console.log("async setState failed to confim change with ", ex);
+            console.log(`async setState failed to confim change ack on comand ${command} with`, ex);
         }
         //this.state[attr] = value; doing a set returns with a CHN confirmation - not needed
         //this.checkForChange()
@@ -529,7 +532,7 @@ class MHRCWMP1_connect extends EventEmitter {
             this.emit("CHN," + this.number, name, value);
             this.emit("CHN," + this.number + ":" + name, value);
         } else {
-            this.log.debug("Received unknown message:", code, rest);
+            this.log.warn("Received unknown message:", code, rest);
         }
     }
 

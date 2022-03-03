@@ -123,8 +123,7 @@ export class MHRCWMP1 extends EventEmitter implements Device {
      * Enables periodic timer for polling all device sensor states
      */
     public startSynchronization(): void {
-        //setImmediate(() => { this.syncState() });
-        setTimeout(() => { this.syncState() },100000);
+        setImmediate(() => { this.syncState() });
     }
 
     /**
@@ -143,6 +142,7 @@ export class MHRCWMP1 extends EventEmitter implements Device {
      * @returns Object containing device information such as firmware version
      */
     public async getInfo(): Promise<Record<string, string>> {
+        this.log.warn(`LENGTH: ${this.identity.length}`)
         if (this.identity.length == 0) {
             try {
                 await this.waitForEvent(this, "onIDUpd");

@@ -72,18 +72,18 @@ export class MHRCWMP1 extends EventEmitter implements Device {
     public get = {
         active: (): number => {
             this.log.debug(this.state)
-            return this.state.onoff
+            return this.state.ONOFF
         },
-        currentTemperature: (): number => this.state.ambtemp,
-        fanSpeed: (): number => this.state.fansp,
+        currentTemperature: (): number => this.state.AMBTEMP,
+        fanSpeed: (): number => this.state.FANSP,
         locked: (): number => 0, //no locked mode
         maxSetpoint: (): number => this.state.maxSetpoint,
         minSetpoint: (): number => this.state.minSetpoint,
-        mode: (): number => this.state.mode,
+        mode: (): number => this.state.MODE,
         outdoorTemperature: (): number => this.state.outdoorTemperature,
-        setpoint: (): number => this.state.setptemp,
-        swingMode: (): number => (this.state.vaneud == 10) ? 1 : 0,
-        valid: (): boolean => typeof this.state.onoff !== "undefined",
+        setpoint: (): number => this.state.SETPTEMP,
+        swingMode: (): number => (this.state.VANEUD == 10) ? 1 : 0,
+        valid: (): boolean => typeof this.state.ONOFF !== "undefined",
     };
 
     /**
@@ -92,10 +92,10 @@ export class MHRCWMP1 extends EventEmitter implements Device {
      */
     public set = {
         active: async (value: number): Promise<void> => {
-            this.setState('onoff', value);
+            this.setState('ONOFF', value);
         },
         fanSpeed: async (value: number): Promise<void> => {
-            this.setState('fansp', value);
+            this.setState('FANSP', value);
         },
         locked: async (value: number): Promise<void> => {
             //this.setState('remoteDisable', value);
@@ -107,16 +107,16 @@ export class MHRCWMP1 extends EventEmitter implements Device {
             this.setState('minSetpoint', value);
         },
         mode: async (value: number): Promise<void> => {
-            this.setState('mode', value);
+            this.setState('MODE', value);
         },
         setpoint: async (value: number): Promise<void> => {
-            this.setState('setptemp', value);
+            this.setState('SETPTEMP', value);
         },
         swingMode: async (value: number): Promise<void> => {
             if (value) {
-                this.setState('vaneud', 10);
+                this.setState('VANEUD', 10);
             } else {
-                this.setState('vaneud', 4);
+                this.setState('VANEUD', 4);
             }
         }
     }
@@ -384,7 +384,7 @@ export class MHRCWMP1 extends EventEmitter implements Device {
         } else if (name == "AMBTEMP") {
           //this.log.debug("Device ambient temperature now:", value);
         }
-        const id = this.sensorMap[name.toString().toLowerCase()].uid;
+        const id = this.sensorMap[name.toString().toUpperCase()].uid;
         const chnData: SensorType = { uid: id, value: value}
         this.emit("onCHNUpd")
         this.parseState(chnData)
@@ -550,58 +550,58 @@ class MHRCWMP1_connect extends EventEmitter {
 const SensorConfigMap = [
     {
         uid: 1,
-        attr: "onoff",
+        attr: "ONOFF",
         values: {
-            0: "off",
-            1: "on",
+            0: "OFF",
+            1: "ON",
         },
         toVal: (v: number) => { 
-            if (v == 0) return "off"
-            if (v == 1) return "on"
+            if (v == 0) return "OFF"
+            if (v == 1) return "ON"
             return v
          },
         fromVal: (v: any) => {  // eslint-disable-line @typescript-eslint/no-explicit-any
-            if (v == "off") return 0
-            if (v == "on") return 1
+            if (v == "OFF") return 0
+            if (v == "ON") return 1
             return v
          }
     },
     {
         uid: 2,
-        attr: "mode",
+        attr: "MODE",
         values: {
-            "auto": 0,
-            "heat": 1,
-            "dry": 2,
-            "fan": 3,
-            "cool": 4,
+            "AUTO": 0,
+            "HEAT": 1,
+            "DRY": 2,
+            "FAN": 3,
+            "COOL": 4,
         },
         toVal: (v: number) => { 
             console.log(`toval ${v}`)
             switch(v){
-                case 0: return "auto"
-                case 1: return "heat"
-                case 2: return "dry"
-                case 3: return "fan"
-                case 4: return "cool"
-                default: return "auto"
+                case 0: return "AUTO"
+                case 1: return "HEAT"
+                case 2: return "DRY"
+                case 3: return "FAN"
+                case 4: return "COOL"
+                default: return "DRY"
             }
          },
         fromVal: (v: any) => {  // eslint-disable-line @typescript-eslint/no-explicit-any
             console.log(`fromval ${v}`)
             switch(v){
-                case "auto": return 0
-                case "heat": return 1
-                case "dry": return 2
-                case "fan": return 3
-                case "cool": return 4
-                default: return 0
+                case "AUTO": return 0
+                case "HEAT": return 1
+                case "DRY": return 2
+                case "FAN": return 3
+                case "COOL": return 4
+                default: return 2
             }
          }
     },
     {
         uid: 4,
-        attr: "fansp",
+        attr: "FANSP",
         values: {
             "quiet": 1,
             "low": 2,
@@ -611,7 +611,7 @@ const SensorConfigMap = [
     },
     {
         uid: 5,
-        attr: "vaneud",
+        attr: "VANEUD",
         values: {
             "auto": 0,
             "pos-1": 1,
@@ -628,25 +628,25 @@ const SensorConfigMap = [
             "wide": 12
         },
         toVal: (v: number) => { 
-            if (v == 0) return "auto"
-            if (v == 10) return "swing"
+            if (v == 0) return "AUTO"
+            if (v == 10) return "SWING"
             return v
          },
         fromVal: (v: any) => {  // eslint-disable-line @typescript-eslint/no-explicit-any
-            if (v == "auto") return 0
-            if (v == "swing") return 10
+            if (v == "AUTO") return 0
+            if (v == "SWING") return 10
             return v
          }
     },
     {
         uid: 9,
-        attr: 'setptemp',
+        attr: 'SETPTEMP',
         fromVal: (v: number) => { if (v == 32768) { return 28; } else { return v / 10.0 } },
         toVal: (v: number) => { return v * 10.0 },
     },
     {
         uid: 10,
-        attr: 'ambtemp',
+        attr: 'AMBTEMP',
         fromVal: (v: number) => { return v / 10.0 },
     },
     {

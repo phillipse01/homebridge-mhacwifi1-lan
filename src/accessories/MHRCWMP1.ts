@@ -286,11 +286,12 @@ export class MHRCWMP1 extends EventEmitter implements Device {
         }
         this.coms.send(command)
 
-        try {
-            await this.waitForEvent(this.coms, "ACK");
-        } catch (ex) {
-            console.log(`async setState failed to confim change ack on comand ${command} with`);
-        }
+        //try {
+        //    await this.waitForEvent(this.coms, "ACK");
+        //} catch (ex) {
+         //   console.log(`async setState failed to confim change ack on comand ${command} with`);
+        //}
+
         //this.state[attr] = value; doing a set returns with a CHN confirmation - not needed
         //this.checkForChange()
     }
@@ -506,6 +507,7 @@ class MHRCWMP1_connect extends EventEmitter {
       }
     
     private onSocketLine = (line) => {
+        this.log.debug(`line: ${line}`)
         const [code, rest] = line.split(":", 2);
         if (code == "ID") {
             this.log.debug("Received identify:", rest)

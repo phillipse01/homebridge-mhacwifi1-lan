@@ -286,11 +286,12 @@ export class MHRCWMP1 extends EventEmitter implements Device {
         }
         this.coms.send(command)
 
-        //try {
-        //    await this.waitForEvent(this.coms, "ACK");
-        //} catch (ex) {
-        //    console.log(`async setState failed to confim change ack on comand ${command} with`);
-        //}
+        try {
+            const test = await this.waitForEvent(this.coms, "ACK");
+            console.log(`ACK? ${test}`)
+        } catch (ex) {
+            console.log(`async setState failed to confim change ack on comand ${command} with`);
+        }
 
         //this.state[attr] = value; doing a set returns with a CHN confirmation - not needed
         //this.checkForChange()
@@ -574,7 +575,6 @@ const SensorConfigMap = [
             "COOL": 4,
         },
         toVal: (v: number) => { 
-            console.log(`toval ${v}`)
             switch(v){
                 case 0: return "AUTO"
                 case 1: return "HEAT"
@@ -585,7 +585,6 @@ const SensorConfigMap = [
             }
          },
         fromVal: (v: any) => {  // eslint-disable-line @typescript-eslint/no-explicit-any
-            console.log(`fromval ${v}`)
             switch(v){
                 case "AUTO": return 0
                 case "HEAT": return 1

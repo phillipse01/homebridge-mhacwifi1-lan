@@ -340,7 +340,7 @@ export class MHRCWMP1 extends EventEmitter implements Device {
     private onCHN = (name, value) => {
         this.log.debug("INCOMING STATE:")
         let chnData
-        const id = this.sensorMap[name.tolowercase()].uid;
+        const id = this.sensorMap[name.toString().tolowercase()].uid;
         chnData.uid = id;
         chnData.value = value;
 
@@ -488,7 +488,7 @@ class MHRCWMP1_connect extends EventEmitter {
         this.sendID();
     
         // Ask for the initial state
-        this.sendGET("*");
+        //this.sendGET("*");
 
         //start ping to keep socket open
          this.timerId = setInterval(() => this.send("PING"), 50000);

@@ -31,10 +31,9 @@ export class MHRCWMP1 extends EventEmitter implements Device {
     private state: any = {}                 // eslint-disable-line @typescript-eslint/no-explicit-any
 
     private coms: MHRCWMP1_connect
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    private identity: any = {}
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    private info: any;
+    private identity: any | undefined       // eslint-disable-line @typescript-eslint/no-explicit-any
+    private info: any;                      // eslint-disable-line @typescript-eslint/no-explicit-any
+
 
     constructor(
         private log: Logger,
@@ -143,7 +142,7 @@ export class MHRCWMP1 extends EventEmitter implements Device {
      */
     public async getInfo(): Promise<Record<string, string>> {
         this.log.warn(`LENGTH: ${this.identity.length}`)
-        if (this.identity.length == 0) {
+        if (this.identity.length == undefined) {
             try {
                 await this.waitForEvent(this, "onIDUpd");
             } catch (ex) {

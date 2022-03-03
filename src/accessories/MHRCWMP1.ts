@@ -551,7 +551,17 @@ const SensorConfigMap = [
         values: {
             0: "off",
             1: "on",
-        }
+        },
+        toVal: (v: number) => { 
+            if (v == 0) return "off"
+            if (v == 1) return "on"
+            return v
+         },
+        fromVal: (v: any) => {  // eslint-disable-line @typescript-eslint/no-explicit-any
+            if (v == "off") return 0
+            if (v == "on") return 1
+            return v
+         }
     },
     {
         uid: 2,

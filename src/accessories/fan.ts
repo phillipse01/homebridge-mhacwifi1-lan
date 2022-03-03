@@ -12,7 +12,7 @@ export class FanService {
         private readonly device: Device
     ) {
         const Characteristic = platform.Characteristic;
-
+        platform.log.debug("1. construct")
         // Create the fan service
         // Implemented characteristics:
         //    Active
@@ -21,6 +21,8 @@ export class FanService {
         //    SwingMode
         this.service = accessory.getService(platform.Service.Fanv2) ||
             accessory.addService(platform.Service.Fanv2, accessory.context.device.name + " Fan");
+        platform.log.debug("2. service")
+
         this.service.getCharacteristic(Characteristic.Active)
             .onGet(this.getActive.bind(this))
             .onSet(this.setActive.bind(this));
@@ -32,21 +34,28 @@ export class FanService {
         this.service.getCharacteristic(Characteristic.SwingMode)
             .onGet(this.getSwingMode.bind(this))
             .onSet(this.setSwingMode.bind(this));
+        platform.log.debug("3. setup")
+
     }
 
     updateHomeBridgeState(): void {
+        console.log("upd hmbr")
         if (!this.device.get.valid())
             return
+        console.log("past rtn")
         this.syncCharacteristic('Active', this.getActive())
+        console.log("syncd act")
         this.syncCharacteristic('RotationSpeed', this.getRotationSpeed())
+        console.log("syncd spd")
         this.syncCharacteristic('SwingMode', this.getSwingMode())
+        console.log("syncd swing")
     }
 
     syncCharacteristic(characteristic: string, value: number): void {
         if (this.service.getCharacteristic(this.platform.Characteristic[characteristic]).value != value) {
             this.platform.log.debug(`Updating homebridge characteristics Fan.${characteristic} => ${value}`)
             this.service.getCharacteristic(this.platform.Characteristic[characteristic]).updateValue(value)
-        }
+        } else {console.log("whoops")}
     }
 
     private checkValid():  void {

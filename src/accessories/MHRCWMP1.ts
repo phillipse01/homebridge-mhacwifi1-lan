@@ -342,32 +342,32 @@ export class MHRCWMP1 extends EventEmitter implements Device {
     private onCHN = (name, value) => {
         if (name == "ONOFF") {
           if (value == "ON" ) {
-            this.log.debug("Device turned ON")
+            //this.log.debug("Device turned ON")
           } else if (value == "OFF") {
-            this.log.debug("Device turned OFF")
+            //this.log.debug("Device turned OFF")
           } else {
             this.log.warn("Unknown ONOFF value:", value)
           }
         } else if (name == "MODE") {
           if (value == "AUTO" ) {
-            this.log.debug("Device set to AUTO mode")
+            //this.log.debug("Device set to AUTO mode")
           } else if (value == "HEAT") {
-            this.log.debug("Device set to HEAT mode")
+            //this.log.debug("Device set to HEAT mode")
           } else if (value == "COOL") {
-            this.log.debug("Device set to COOL mode")
+            //this.log.debug("Device set to COOL mode")
           } else if (value == "FAN") {
-            this.log.debug("Device set to FAN mode")
+           // this.log.debug("Device set to FAN mode")
           } else if (value == "DRY") {
-            this.log.debug("Device set to DRY mode")
+            //this.log.debug("Device set to DRY mode")
           } else {
             this.log.warn("Device set to unknown mode:", value)
           }
         } else if (name == "SETPTEMP") {
-          this.log.debug("Device target temperature set to:", value);
+          //this.log.debug("Device target temperature set to:", value);
         } else if (name == "FANSP") {
-          this.log.debug("Device fanspeed set to:", value);
+          //this.log.debug("Device fanspeed set to:", value);
         } else if (name == "VANEUD") {
-          this.log.debug("Device vertical vane set to:", value);
+          //this.log.debug("Device vertical vane set to:", value);
         } else if (name == "VANELR") {
           return //not supported yet
           this.log.debug("Device horizontal vane set to:", value);
@@ -378,7 +378,7 @@ export class MHRCWMP1 extends EventEmitter implements Device {
           return //not supported yet
           this.log.debug("Device error code:", value);
         } else if (name == "AMBTEMP") {
-          this.log.debug("Device ambient temperature now:", value);
+          //this.log.debug("Device ambient temperature now:", value);
         }
         const id = this.sensorMap[name.toString().toLowerCase()].uid;
         const chnData: SensorType = { uid: id, value: value}
@@ -520,7 +520,7 @@ class MHRCWMP1_connect extends EventEmitter {
         } else if (code == "CHN," + this.number) {
             const [name, value] = rest.split(",", 2);
 
-            this.log.debug("Received Change:", name, value)
+            //this.log.debug("Received Change:", name, value)
             this.emit("CHN," + this.number, name, value);
             this.emit("CHN," + this.number + ":" + name, value);
         } else {

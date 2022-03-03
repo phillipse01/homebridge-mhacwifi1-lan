@@ -161,6 +161,7 @@ export class MHRCWMP1 extends EventEmitter implements Device {
      */
     public async refreshState(): Promise<void>  {
         // force all sensor data
+        this.log.debug("Full refresh of state")
         this.coms.sendGET("*");
         //try {
         //    await this.waitForEvent(this, "onCHNUpd",30000);
@@ -391,7 +392,7 @@ export class MHRCWMP1 extends EventEmitter implements Device {
     }
 
 
-    waitForEvent<T>(emitter: EventEmitter, event: string, timeoutMS = 10000): Promise<T> {
+    async waitForEvent<T>(emitter: EventEmitter, event: string, timeoutMS = 10000): Promise<T> {
         return new Promise((resolve, reject) => {
             const timeoutId = setTimeout(() => {
                 reject(new Error(`timeout waiting for event: ${event}`)) 
@@ -454,23 +455,23 @@ class MHRCWMP1_connect extends EventEmitter {
         return MHRCWMP1_connect.instance;
     }
 
-    public send(command) {
+    public async send(command) {
         this.log.debug("Send:", command);
         this.socket.write(command + "\r\n");
     }
     
-    public sendID() {
+    public async sendID() {
         this.send("ID");
     }
     
-    public sendINFO(callback) {
+    public async sendINFO(callback) {
         if (callback) {
           this.once("INFO", function(value) { callback(null, value) });
         }
         this.send("INFO");
     }
     
-    public sendGET(name) {
+    public async sendGET(name) {
         this.send("GET," + this.number + ":" + name);
     }
 

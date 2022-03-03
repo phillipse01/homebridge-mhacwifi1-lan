@@ -564,7 +564,7 @@ const SensorConfigMap = [
             "cool": 4,
         },
         toVal: (v: number) => { 
-            this.log.debug("")
+            console.log(`toval ${v}`)
             switch(v){
                 case 0: return "auto"
                 case 1: return "heat"
@@ -575,6 +575,7 @@ const SensorConfigMap = [
             }
          },
         fromVal: (v: any) => {  // eslint-disable-line @typescript-eslint/no-explicit-any
+            console.log(`fromval ${v}`)
             switch(v){
                 case "auto": return 0
                 case "heat": return 1

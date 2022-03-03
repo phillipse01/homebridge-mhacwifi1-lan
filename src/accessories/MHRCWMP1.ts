@@ -81,8 +81,8 @@ export class MHRCWMP1 extends EventEmitter implements Device {
         setpoint: (): number => this.state.setptemp,
         swingMode: (): number => (this.state.vaneud == 10) ? 1 : 0,
         valid: (): boolean => {
-            this.log.debug(this.state)
-            return typeof this.state.active !== "undefined"},
+            //this.log.debug(this.state)
+            return typeof this.state.onoff !== "undefined"},
     };
 
     /**

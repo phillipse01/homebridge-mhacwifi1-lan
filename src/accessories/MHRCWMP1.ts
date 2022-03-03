@@ -161,7 +161,7 @@ export class MHRCWMP1 extends EventEmitter implements Device {
     public async refreshState(): Promise<void>  {
         // force all sensor data
         this.log.debug("Full refresh of state")
-        this.coms.sendGET("*");
+        await this.coms.sendGET("*");
         //try {
         //    await this.waitForEvent(this, "onCHNUpd",30000);
         //} catch (ex) {
@@ -289,7 +289,7 @@ export class MHRCWMP1 extends EventEmitter implements Device {
         try {
             await this.waitForEvent(this.coms, "ACK");
         } catch (ex) {
-            console.log(`async setState failed to confim change ack on comand ${command} with`, ex);
+            console.log(`async setState failed to confim change ack on comand ${command} with`);
         }
         //this.state[attr] = value; doing a set returns with a CHN confirmation - not needed
         //this.checkForChange()
@@ -450,7 +450,7 @@ class MHRCWMP1_connect extends EventEmitter {
         return MHRCWMP1_connect.instance;
     }
 
-    public async send(command) {
+    public send(command) {
         this.log.debug("Send:", command);
         this.socket.write(command + "\r\n");
     }

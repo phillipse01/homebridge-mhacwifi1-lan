@@ -142,7 +142,7 @@ export class MHRCWMP1 extends EventEmitter implements Device {
      */
     public async getInfo(): Promise<Record<string, string>> {
         this.log.warn(`LENGTH: ${this.identity.length}`)
-        if (this.identity.length == undefined) {
+        if (this.identity == undefined) {
             try {
                 await this.waitForEvent(this, "onIDUpd");
             } catch (ex) {

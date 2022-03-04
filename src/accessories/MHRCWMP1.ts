@@ -203,7 +203,7 @@ export class MHRCWMP1 extends EventEmitter implements Device {
                 if (query_time > this.slowThreshold) {
                     this.log.warn(`Slow response time from ${this.host} query time ${query_time}ms`);
                 }
-                this.checkForChange()
+                //this.checkForChange() handled by onCHN
             })
             .catch(error => {
                 this.log.error('Unable to refresh state', error);
@@ -524,6 +524,8 @@ class MHRCWMP1_connect extends EventEmitter {
             //this.log.debug("Received Change:", name, value)
             this.emit("CHN," + this.number, name, value);
             this.emit("CHN," + this.number + ":" + name, value);
+        } else if (code == "PONG") {
+            this.log.debug("Received the PONG to your PING")
         } else {
             this.log.warn("Received unknown message:", code, rest);
         }

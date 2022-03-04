@@ -62,7 +62,7 @@
         "required": false,
         "placeholder": "1000",
         "minimum": 1000,
-        "maximum": 30000
+        "maximum": 5000
       },      
       "wmpDevice": {
         "title": "Is the hardware WMP? (MH-RC-WMP-1)",

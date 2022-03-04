@@ -287,8 +287,7 @@ export class MHRCWMP1 extends EventEmitter implements Device {
         this.coms.send(command)
 
         try {
-            const test = await this.waitForEvent(this.coms, "ACK");
-            console.log(`ACK? ${test}`)
+            await this.waitForEvent(this.coms, "ACK");
         } catch (ex) {
             console.log(`async setState failed to confim change ack on comand ${command} with`);
         }
@@ -508,7 +507,6 @@ class MHRCWMP1_connect extends EventEmitter {
       }
     
     private onSocketLine = (line) => {
-        this.log.debug(`line: ${line}`)
         const [code, rest] = line.split(":", 2);
         if (code == "ID") {
             this.log.debug("Received identify:", rest)
@@ -556,12 +554,10 @@ const SensorConfigMap = [
         toVal: (v: number) => { 
             if (v == 0) return "OFF"
             if (v == 1) return "ON"
-            return v
          },
         fromVal: (v: any) => {  // eslint-disable-line @typescript-eslint/no-explicit-any
             if (v == "OFF") return 0
             if (v == "ON") return 1
-            return v
          }
     },
     {
@@ -603,7 +599,9 @@ const SensorConfigMap = [
             "low": 2,
             "medium": 3,
             "high": 4,
-        }
+        },
+        toVal: (v: number) => v == 0 ? "AUTO" : v,
+        fromVal: (v: any) => v == "AUTO" ? 0 : v // eslint-disable-line @typescript-eslint/no-explicit-any
     },
     {
         uid: 5,
@@ -626,12 +624,10 @@ const SensorConfigMap = [
         toVal: (v: number) => { 
             if (v == 0) return "AUTO"
             if (v == 10) return "SWING"
-            return v
          },
         fromVal: (v: any) => {  // eslint-disable-line @typescript-eslint/no-explicit-any
             if (v == "AUTO") return 0
             if (v == "SWING") return 10
-            return v
          }
     },
     {

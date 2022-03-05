@@ -60,6 +60,7 @@ export class FanService {
         this.checkValid()
         const active = this.device.get.active();
         const mode = this.device.get.mode();
+        this.platform.log.info(`fanactive ${active}`)
         return (active && mode == MhacModeTypes.FAN) ? 1 : 0;
     }
 

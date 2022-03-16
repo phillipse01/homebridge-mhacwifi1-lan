@@ -286,13 +286,14 @@ export class MHRCWMP1 extends EventEmitter implements Device {
         }
 
         this.log.debug("Send:", command);
-        await this.coms.sendAwait(command,20000)
+        //await this.coms.sendAwait(command,20000)
+        this.coms.send(command)
 
-        /*try {
+        try {
             await this.waitForEvent(this.coms, "ACK");
         } catch (ex) {
             this.log.warn(`setState failed to confim change (ACK) on comand ${command} with`, ex);
-        }*/
+        }
 
         //this.state[attr] = value; doing a set returns with a CHN confirmation - not needed
         //this.checkForChange()

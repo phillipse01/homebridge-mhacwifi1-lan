@@ -145,7 +145,7 @@ export class MHRCWMP1 extends EventEmitter implements Device {
             try {
                 await this.waitForEvent(this, "onIDUpd");
             } catch (ex) {
-                console.log("async ID update failed with ", ex);
+                this.log.warn("async ID update failed with ", ex);
             }
         }
         return this.identity
@@ -284,16 +284,15 @@ export class MHRCWMP1 extends EventEmitter implements Device {
         } else {
             command = `SET,1:${attr},${xvalue}`
         }
-        setImmediate(async () => {
-            this.log.debug("Send:", command);
-            this.coms.send(command)
 
-            try {
-                await this.waitForEvent(this.coms, "ACK");
-            } catch (ex) {
-                console.log(`async setState failed to confim change ack on comand ${command} with`);
-            }
-        });
+        this.log.debug("Send:", command);
+        await this.coms.sendAwait(command,20000)
+
+        /*try {
+            await this.waitForEvent(this.coms, "ACK");
+        } catch (ex) {
+            this.log.warn(`setState failed to confim change (ACK) on comand ${command} with`, ex);
+        }*/
 
         //this.state[attr] = value; doing a set returns with a CHN confirmation - not needed
         //this.checkForChange()
@@ -394,7 +393,7 @@ export class MHRCWMP1 extends EventEmitter implements Device {
     async waitForEvent<T>(emitter: EventEmitter, event: string, timeoutMS = 10000): Promise<T> {
         return new Promise((resolve, reject) => {
             const timeoutId = setTimeout(() => {
-                reject(new Error(`timeout waiting for event: ${event}`)) 
+                reject(new Error(`timeout after ${timeoutMS}ms waiting for event: ${event}`))
               }, timeoutMS)         
 
             const success = (val: T) => {
@@ -457,6 +456,15 @@ class MHRCWMP1_connect extends EventEmitter {
     public send(command) {
         this.socket.write(command + "\r\n");
     }
+
+    public async sendAwait(command,timeout) {
+        this.socket.write(command + "\r\n");
+        try {
+            await this.waitForEvent(this, "ACK", timeout);
+        } catch (ex) {
+            this.log.warn(`setState failed to confim change (ACK) on comand ${command} with`, ex);
+        }
+    }
     
     public async sendID() {
         this.send("ID");
@@ -495,6 +503,7 @@ class MHRCWMP1_connect extends EventEmitter {
     }
 
     private onSocketData = (data) => {
+        this.log.debug(`DATA: ${data}`)
         this.buffer += data;
         let n = this.buffer.indexOf("\n");
         while (~n) {
@@ -544,6 +553,27 @@ class MHRCWMP1_connect extends EventEmitter {
         setTimeout(() => {
             this.connect();
         }, 5000);
+    }
+
+    async waitForEvent<T>(emitter: EventEmitter, event: string, timeoutMS = 10000): Promise<T> {
+        return new Promise((resolve, reject) => {
+            const timeoutId = setTimeout(() => {
+                reject(new Error(`timeout after ${timeoutMS}ms waiting for event: ${event}`))
+              }, timeoutMS)         
+
+            const success = (val: T) => {
+                emitter.off("error", fail);
+                clearTimeout(timeoutId);
+                resolve(val);
+            };
+            const fail = (err: Error) => {
+                emitter.off(event, success);
+                clearTimeout(timeoutId);
+                reject(err);
+            };
+            emitter.once(event, success);
+            emitter.once("error", fail);
+        });
     }
 
 }

@@ -33,7 +33,6 @@ export class MHRCWMP1 extends EventEmitter implements Device {
 
     private coms: MHRCWMP1_connect
     private identity: any | undefined       // eslint-disable-line @typescript-eslint/no-explicit-any
- //   private info: any;                      // eslint-disable-line @typescript-eslint/no-explicit-any
 
     private jobQueue: queue;
 
@@ -65,7 +64,6 @@ export class MHRCWMP1 extends EventEmitter implements Device {
         this.coms = MHRCWMP1_connect.getInstance(this.log,this.host)
         //listen for event info from the connection
         this.coms.on("ID", this.onID);
-        //this.coms.on("INFO", this.onINFO);
         this.coms.on("CHN,1", this.onCHN);
         //setup queue
         this.jobQueue = queue({
@@ -346,17 +344,6 @@ export class MHRCWMP1 extends EventEmitter implements Device {
         this.identity.sn = wlanSTAMAC
         this.emit("onIDUpd")
     }
-
-    /**
-     * Callback to handle process ID data sent from WMP
-     * 
-     * Emits an onIDUupd on success
-     *
-     * @param id  id string recieved from WMP protocol
-     */
-    //private onINFO = (name, value) => {
-    //    this.info[name] = value;
-    //}
     
     /**
      * Callback to handle each line of sensor data recieved from

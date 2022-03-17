@@ -1,6 +1,7 @@
 import { EventEmitter } from 'events';
 import { Logger } from 'homebridge';
 import net from 'net';
+import queue from 'queue';
 import { SensorType, EVENT_CHANGED, EVENT_UPDATED, Device } from './device';
 
 /**
@@ -34,6 +35,8 @@ export class MHRCWMP1 extends EventEmitter implements Device {
     private identity: any | undefined       // eslint-disable-line @typescript-eslint/no-explicit-any
     private info: any;                      // eslint-disable-line @typescript-eslint/no-explicit-any
 
+    private jobQueue: queue;
+
 
     constructor(
         private log: Logger,
@@ -64,6 +67,11 @@ export class MHRCWMP1 extends EventEmitter implements Device {
         this.coms.on("ID", this.onID);
         this.coms.on("INFO", this.onINFO);
         this.coms.on("CHN,1", this.onCHN);
+        //setup queue
+        this.jobQueue = queue({
+            autostart: true,
+            concurrency: 1,
+           });
     }
 
     /**
@@ -286,7 +294,9 @@ export class MHRCWMP1 extends EventEmitter implements Device {
         }
 
         this.log.debug("Send:", command);
-        console.log(await this.coms.sendAwait(command,20000))
+        this.jobQueue.push(async () => {
+            await this.coms.sendAwait(command,20000)
+        })
         /*this.coms.send(command)
 
         try {
@@ -504,7 +514,6 @@ class MHRCWMP1_connect extends EventEmitter {
     }
 
     private onSocketData = (data) => {
-        this.log.debug(`DATA: ${data}`)
         this.buffer += data;
         let n = this.buffer.indexOf("\n");
         while (~n) {

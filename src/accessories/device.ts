@@ -22,14 +22,34 @@ export interface Device extends EventEmitter {
     /**
      * Public API for getting state values
      */
-    get: any // eslint-disable-line @typescript-eslint/no-explicit-any    
+    get: {
+        active: () => number,
+        currentTemperature: () => number,
+        fanSpeed: () => number,
+        locked: () => number,
+        maxSetpoint: () => number,
+        minSetpoint: () => number,
+        mode: () => number,
+        outdoorTemperature: () => number,
+        setpoint: () => number,
+        swingMode: () => number,
+        valid: () => boolean,
+    }  
 
     /**
      * Public API for setting state values
      *
      */
-    set: any // eslint-disable-line @typescript-eslint/no-explicit-any
-
+    set: {
+        active: (value: number) => Promise<void>,
+        fanSpeed: (value: number) => Promise<void>,
+        locked: (value: number) => Promise<void>,
+        maxSetpoint: (value: number) => Promise<void>,
+        minSetpoint: (value: number) => Promise<void>,
+        mode: (value: number) => Promise<void>,
+        setpoint: (value: number) => Promise<void>,
+        swingMode: (value: number) => Promise<void>
+    }
      //set:{ minSetpoint: (arg0: number) => Promise<any>; maxSetpoint: (arg0: number) => Promise<any>; active: (arg0: number) => void; setpoint: (arg0: number) => void; locked: (arg0: number) => void; fanSpeed: (arg0: number) => void; swingMode: (arg0: number) => void; mode: (arg0: number) => void; }
 
     /**

@@ -14,7 +14,7 @@ import { SensorType, EVENT_CHANGED, EVENT_UPDATED, Device } from './device';
  * polls all of the device's sensors and reflects those back in the `state`
  * property of the class.  When sensors change values, the object will emit
  * an `update` event to notify listeners that at least one value in the state
- * has changed.  For specific changes, listeners can monitor the `changed`
+ * has changed.  For specific changes, listeners can monitor the `CHN,1`
  * event for the specific state that changed.
  *
  * The aircon status should be obtained through the `get` API such as obj.get.active()
@@ -33,7 +33,7 @@ export class MHRCWMP1 extends EventEmitter implements Device {
 
     private coms: MHRCWMP1_connect
     private identity: any | undefined       // eslint-disable-line @typescript-eslint/no-explicit-any
-    private info: any;                      // eslint-disable-line @typescript-eslint/no-explicit-any
+ //   private info: any;                      // eslint-disable-line @typescript-eslint/no-explicit-any
 
     private jobQueue: queue;
 
@@ -61,11 +61,11 @@ export class MHRCWMP1 extends EventEmitter implements Device {
         this.log.info(`Device sync period is ${this.syncPeriod}ms`)
         this._buildSensorMap();
         this.log.info(`You have selected WMP communication`)
-        //create connaection singleton:
+        //create connection singleton:
         this.coms = MHRCWMP1_connect.getInstance(this.log,this.host)
         //listen for event info from the connection
         this.coms.on("ID", this.onID);
-        this.coms.on("INFO", this.onINFO);
+        //this.coms.on("INFO", this.onINFO);
         this.coms.on("CHN,1", this.onCHN);
         //setup queue
         this.jobQueue = queue({
@@ -81,7 +81,7 @@ export class MHRCWMP1 extends EventEmitter implements Device {
         active: (): number => this.state.ONOFF,
         currentTemperature: (): number => this.state.AMBTEMP,
         fanSpeed: (): number => this.state.FANSP,
-        locked: (): number => 0, //no locked mode
+        locked: (): number => 0, //no locked mode in WMP
         maxSetpoint: (): number => this.state.maxSetpoint,
         minSetpoint: (): number => this.state.minSetpoint,
         mode: (): number => this.state.MODE,
@@ -102,8 +102,8 @@ export class MHRCWMP1 extends EventEmitter implements Device {
         fanSpeed: async (value: number): Promise<void> => {
             this.setState('FANSP', value);
         },
-        locked: async (value: number): Promise<void> => {
-            //this.setState('remoteDisable', value);
+        locked: async (value: number): Promise<void> => { //not a feature in WMP
+            //this.setState('remoteDisable', value); 
         },
         maxSetpoint: async (value: number): Promise<void> => {
             this.setState('maxSetpoint', value);
@@ -145,13 +145,16 @@ export class MHRCWMP1 extends EventEmitter implements Device {
     /**
      * Requests hardware configuration information from the device. Specifically:
      * model, wlanSTAMAC, ip, protocol, fwVersion, rssi, name, sn
+     * 
+     * We get this event from the initilazation of MHRCWMP1_connect class which
+     * calls onID in this class
      *
      * @returns Object containing device information such as firmware version
      */
     public async getInfo(): Promise<Record<string, string>> {
         if (this.identity == undefined) {
             try {
-                await this.waitForEvent(this, "onIDUpd");
+                await this.coms.waitForEvent(this, "onIDUpd");
             } catch (ex) {
                 this.log.warn("async ID update failed with ", ex);
             }
@@ -168,13 +171,8 @@ export class MHRCWMP1 extends EventEmitter implements Device {
      */
     public async refreshState(): Promise<void>  {
         // force all sensor data
-        // this.log.debug("Full refresh of state")
         await this.coms.sendGET("*");
-        //try {
-        //   await this.waitForEvent(this, "onCHNUpd",30000);
-        //} catch (ex) {
-        //   console.log("async CHN full update failed with ", ex);
-        //}
+        //this will trigger CHN,1 events for each sensor, which in turn triggers onCHN
     }
 
     /**
@@ -191,19 +189,15 @@ export class MHRCWMP1 extends EventEmitter implements Device {
             this.state.maxSetpoint = this.maxSetpoint
 
             // Set sane defaults
+            // In WMP we set both at the same time, only need to call one of these
             await this.set.minSetpoint(this.minSetpoint)
                 .catch(error => {
                     this.log.error('Unable to get set minSetpoint value', error)
-                })
-            await this.set.maxSetpoint(this.maxSetpoint)
-                .catch(error => {
-                    this.log.error('Unable to get set maxSetpoint value', error)
                 })
         }
 
         const syncPeriod = this.syncPeriod
 
-        // this.log.debug('Refreshing state')
         const start = Date.now()
         await this.refreshState()
             .then(() => {
@@ -281,6 +275,8 @@ export class MHRCWMP1 extends EventEmitter implements Device {
         const xvalue = map.xform ? map.xform(value) : value
         this.log.debug(`setState attr=${attr}, uid=${map.uid}, value=${xvalue}`);
         let command: string
+
+        //maxSetpoint and minSetpoint is the same in WMP, adjust command to accomidate
         if(attr == "maxSetpoint") {
             const map2 = this.sensorMap["minSetpoint"];
             const xvalue2 = map2.xform ? map2.xform(this.state.minSetpoint) : this.state.minSetpoint
@@ -293,20 +289,15 @@ export class MHRCWMP1 extends EventEmitter implements Device {
             command = `SET,1:${attr},${xvalue}`
         }
 
-        this.log.debug("Send:", command);
+        //push to job queue to ensure synchronous and single concurrency when running commands
         this.jobQueue.push(async () => {
-            await this.coms.sendAwait(command,20000)
+            try{
+                await this.coms.sendAwait(command,20000)
+            }
+            catch (ex) {
+                this.log.warn(`setState failed with `, ex)
+            }
         })
-        /*this.coms.send(command)
-
-        try {
-            await this.waitForEvent(this.coms, "ACK");
-        } catch (ex) {
-            this.log.warn(`setState failed to confim change (ACK) on comand ${command} with`, ex);
-        }*/
-
-        //this.state[attr] = value; doing a set returns with a CHN confirmation - not needed
-        //this.checkForChange()
     }
 
     /**
@@ -341,6 +332,13 @@ export class MHRCWMP1 extends EventEmitter implements Device {
 
     }
 
+    /**
+     * Callback to handle process ID data sent from WMP
+     * 
+     * Emits an onIDUupd on success
+     *
+     * @param id  id string recieved from WMP protocol
+     */
     private onID = (id) => {
         //ID:Model,MAC,IP,Protocol,Version,RSSI,Name,(unknown)
         const [model, wlanSTAMAC, ip, protocol, fwVersion, rssi, name] = id.split(",");
@@ -349,10 +347,27 @@ export class MHRCWMP1 extends EventEmitter implements Device {
         this.emit("onIDUpd")
     }
 
-    private onINFO = (name, value) => {
-        this.info[name] = value;
-    }
+    /**
+     * Callback to handle process ID data sent from WMP
+     * 
+     * Emits an onIDUupd on success
+     *
+     * @param id  id string recieved from WMP protocol
+     */
+    //private onINFO = (name, value) => {
+    //    this.info[name] = value;
+    //}
     
+    /**
+     * Callback to handle each line of sensor data recieved from
+     * WMP messages. This ultimatley feeds into the state variable
+     * and provides the data on the current device state
+     * 
+     * Emits an onCHNUpd on success
+     *
+     * @param name  The "key" - the sensor name
+     * @param value  the "value" - value of the sensor
+     */
     private onCHN = (name, value) => {
         if (name == "ONOFF") {
           if (value == "ON" ) {
@@ -399,28 +414,6 @@ export class MHRCWMP1 extends EventEmitter implements Device {
         this.emit("onCHNUpd")
         this.parseState(chnData)
     }
-
-
-    async waitForEvent<T>(emitter: EventEmitter, event: string, timeoutMS = 10000): Promise<T> {
-        return new Promise((resolve, reject) => {
-            const timeoutId = setTimeout(() => {
-                reject(new Error(`timeout after ${timeoutMS}ms waiting for event: ${event}`))
-              }, timeoutMS)         
-
-            const success = (val: T) => {
-                emitter.off("error", fail);
-                clearTimeout(timeoutId);
-                resolve(val);
-            };
-            const fail = (err: Error) => {
-                emitter.off(event, success);
-                clearTimeout(timeoutId);
-                reject(err);
-            };
-            emitter.once(event, success);
-            emitter.once("error", fail);
-        });
-    }
 }
 
 /**
@@ -434,6 +427,8 @@ export class MHRCWMP1 extends EventEmitter implements Device {
  * The WMP protocol also closes the connection after 1~2 minutes of no
  * commands recieved. We send a periodic PING command to ensure the 
  * socket stays open.
+ * 
+ * This class uses websockets to communicate on port 3310
  * 
  * This class emits events when it recieves data can be listened and acted on:
  *  - ID: identify
@@ -457,6 +452,14 @@ class MHRCWMP1_connect extends EventEmitter {
         this.connect();
     }
 
+    /**
+     * Singleton constroctor object
+     *
+     * @param log logger to use
+     * @param host IP of the WMP server
+     * 
+     * @returns single instance of MHRCWMP1_connect
+     */
     public static getInstance(log: Logger, host: string): MHRCWMP1_connect {
         if (!MHRCWMP1_connect.instance) {
             MHRCWMP1_connect.instance = new MHRCWMP1_connect(log,host);
@@ -464,10 +467,21 @@ class MHRCWMP1_connect extends EventEmitter {
         return MHRCWMP1_connect.instance;
     }
 
+    /**
+     * Send a command to the websocket
+     *
+     * @param log logger to use
+     */
     public send(command) {
         this.socket.write(command + "\r\n");
     }
 
+     /**
+     * Send a command to the websocket and check for ACK
+     * This is used for the commands: SET, CFG, LIMITS
+     *
+     * @param log logger to use
+     */
     public async sendAwait(command,timeout) {
         this.socket.write(command + "\r\n");
         try {
@@ -477,10 +491,19 @@ class MHRCWMP1_connect extends EventEmitter {
         }
     }
     
+    /**
+     * Send ID command
+     *
+     */
     public async sendID() {
         this.send("ID");
     }
     
+    /**
+     * Send INFO command
+     * Currently not used
+     *
+     */
     public async sendINFO(callback) {
         if (callback) {
           this.once("INFO", function(value) { callback(null, value) });
@@ -488,10 +511,19 @@ class MHRCWMP1_connect extends EventEmitter {
         this.send("INFO");
     }
     
+    /**
+     * Send GET command
+     * 
+     * @param name the sensor to get data from. * for all sensors.
+     */
     public async sendGET(name) {
         this.send("GET," + this.number + ":" + name);
     }
 
+    /**
+     * Initiate connection to the device, setup callbacks
+     * 
+     */
     private connect() {
         this.log.info("Connecting to Intesis at "+this.host+":3310")
         this.socket = net.connect(3310, this.host, this.onSocketConnect);
@@ -501,6 +533,10 @@ class MHRCWMP1_connect extends EventEmitter {
         this.socket.on("data", this.onSocketData);
     }
 
+    /**
+     * If we can connect, get ID of the device and setup regular ping
+     * 
+     */
     private onSocketConnect = () => {
         // Ask for identifying information
         this.sendID();
@@ -513,6 +549,11 @@ class MHRCWMP1_connect extends EventEmitter {
 
     }
 
+    /**
+     * Recieving data from the WMP websocket
+     * 
+     * @param data raw data recieved from WMP websocket
+     */
     private onSocketData = (data) => {
         this.buffer += data;
         let n = this.buffer.indexOf("\n");
@@ -526,24 +567,26 @@ class MHRCWMP1_connect extends EventEmitter {
           n = this.buffer.indexOf("\n");
         }
       }
-    
+
+    /**
+     * Processing data from the WMP websocket
+     * 
+     * @param line A line of data recieved from WMP websocket
+     */
     private onSocketLine = (line) => {
-        this.log.debug(`LINE: ${line}`)
         const [code, rest] = line.split(":", 2);
         if (code == "ID") {
-            this.log.debug("Received identify:", rest)
+            //this.log.debug("Received identify:", rest)
             this.emit("ID", rest);
         } else if (code == "INFO") {
             const [name, value] = rest.split(",", 2);
-            this.log.debug("Received info:", name, "=", value)
+            //this.log.debug("Received info:", name, "=", value)
             this.emit("INFO", name, value);
         } else if (code == "ACK") {
-            this.log.debug("Received ack")
+            //this.log.debug("Received ack")
             this.emit("ACK");
         } else if (code == "CHN," + this.number) {
             const [name, value] = rest.split(",", 2);
-
-            //this.log.debug("Received Change:", name, value)
             this.emit("CHN," + this.number, name, value);
             this.emit("CHN," + this.number + ":" + name, value);
         } else if (code == "PONG") {
@@ -553,10 +596,19 @@ class MHRCWMP1_connect extends EventEmitter {
         }
     }
 
+    /**
+     * Handle Error in the socket
+     * 
+     * @param error the error that occured
+     */
     private onSocketError = (error) => {
         this.log.error("Connection error:", error);
     }
 
+    /**
+     * Handle closing of the socket
+     * 
+     */
     private onSocketClose = () => {
         this.log.warn("Connection closed, reconnecting in 5 seconds");
         clearInterval(this.timerId)
@@ -565,6 +617,10 @@ class MHRCWMP1_connect extends EventEmitter {
         }, 5000);
     }
 
+    /**
+     * Wait specified timeframe for an event to fire, if not timeout with message.
+     * 
+     */
     async waitForEvent<T>(emitter: EventEmitter, event: string, timeoutMS = 10000): Promise<T> {
         return new Promise((resolve, reject) => {
             const timeoutId = setTimeout(() => {
@@ -588,6 +644,8 @@ class MHRCWMP1_connect extends EventEmitter {
 
 }
 
+
+// See _buildSensorMap()
 const SensorConfigMap = [
     {
         uid: 1,

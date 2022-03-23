@@ -289,8 +289,10 @@ export class MHRCWMP1 extends EventEmitter implements Device {
 
         //push to job queue to ensure synchronous and single concurrency when running commands
         this.jobQueue.push(async () => {
+            this.log.debug(`Job: ${command} START`)
             try{
                 await this.coms.sendAwait(command,20000)
+                this.log.debug(`Job: ${command} FIN`)
             }
             catch (ex) {
                 this.log.warn(`setState failed with `, ex)
@@ -470,9 +472,12 @@ class MHRCWMP1_connect extends EventEmitter {
      * @param log logger to use
      */
     public async sendAwait(command,timeout) {
+        this.log.debug(`Job: ${command} SEND`)
         this.socket.write(command + "\r\n");
         try {
+            this.log.debug(`Job: ${command} AWAIT`)
             await this.waitForEvent(this, "ACK", timeout);
+            this.log.debug(`Job: ${command} ACKD`)
         } catch (ex) {
             this.log.warn(`setState failed to confim change (ACK) on comand ${command} with`, ex);
         }
@@ -615,6 +620,7 @@ class MHRCWMP1_connect extends EventEmitter {
               }, timeoutMS)         
 
             const success = (val: T) => {
+                this.log.debug(`ACKERS`)
                 emitter.off("error", fail);
                 clearTimeout(timeoutId);
                 resolve(val);

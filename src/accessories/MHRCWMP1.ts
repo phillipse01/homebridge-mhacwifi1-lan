@@ -152,9 +152,11 @@ export class MHRCWMP1 extends EventEmitter implements Device {
     public async getInfo(): Promise<Record<string, string>> {
         if (this.identity == undefined) {
             try {
+                this.coms.sendID();
                 await this.coms.waitForEvent(this, "onIDUpd");
             } catch (ex) {
                 this.log.warn("async ID update failed with ", ex);
+                await this.coms.sendAwait("ID",40000);
             }
         }
         return this.identity
@@ -613,7 +615,7 @@ class MHRCWMP1_connect extends EventEmitter {
      * Wait specified timeframe for an event to fire, if not timeout with message.
      * 
      */
-    async waitForEvent<T>(emitter: EventEmitter, event: string, timeoutMS = 10000): Promise<T> {
+    async waitForEvent<T>(emitter: EventEmitter, event: string, timeoutMS = 30000): Promise<T> {
         return new Promise((resolve, reject) => {
             const timeoutId = setTimeout(() => {
                 reject(new Error(`timeout after ${timeoutMS}ms waiting for event: ${event}`))

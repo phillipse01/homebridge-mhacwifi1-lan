@@ -156,7 +156,7 @@ export class MHRCWMP1 extends EventEmitter implements Device {
                 await this.coms.waitForEvent(this, "onIDUpd");
             } catch (ex) {
                 this.log.warn("async ID update failed with ", ex);
-                await this.coms.sendAwait("ID",40000);
+                this.getInfo();
             }
         }
         return this.identity

@@ -291,7 +291,7 @@ export class MHRCWMP1 extends EventEmitter implements Device {
         this.jobQueue.push(async () => {
             this.log.debug(`Job: ${command} START`)
             try{
-                await this.coms.sendAwait(command,20000)
+                await this.coms.sendAwait(command,40000)
                 this.log.debug(`Job: ${command} FIN`)
             }
             catch (ex) {
